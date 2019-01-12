@@ -1,7 +1,7 @@
 .idea/*
 node_modules/*
 .DS_Store
-/config
+ 
 /log.txt
 /seed
 /auth
