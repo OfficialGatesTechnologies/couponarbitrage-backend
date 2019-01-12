@@ -1,0 +1,19 @@
+body {
+    background-image: url('../images/paysafe.jpeg');
+    background-repeat: no-repeat center center fixed;
+    background-size: cover;
+    color: black
+}
+
+.transbox {
+    width: 50%;
+    margin: 30px;
+    background-color: #ffffff;    
+    opacity: 0.9;
+    padding: 15px;
+}
+
+code {
+    color: red;
+}
+
