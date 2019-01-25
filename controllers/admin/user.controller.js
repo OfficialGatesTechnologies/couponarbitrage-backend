@@ -1,6 +1,16 @@
 const User = require('../../models/User');
-const { getToken, genRandomPassword, getCryptedPassword } = require('../../utils/api.helpers');
-
+const UserTracking = require('../../models/User_tracking');
+const UserTrackHistory = require('../../models/User_tracking_history');
+const TurnoverRegistration = require('../../models/Turnover_registration');
+const UserIntrested = require('../../models/User_intrested');
+const EmailTemplates = require('../../models/Email_template');
+const {
+    getToken,
+    genRandomPassword,
+    getCryptedPassword,
+    sendCustomMail
+} = require('../../utils/api.helpers');
+const config = require('../../config/config');
 
 function createUserAccount(req, res, next) {
     const token = getToken(req.headers);
@@ -73,12 +83,12 @@ function updateUserAccount(req, res, next) {
 
         const { body } = req;
 
-        const {_id, name, last_name, email, username, password, cpassword, accountPhone,
+        const { _id, name, last_name, email, username, password, cpassword, accountPhone,
             accountCountry, accountReferrence, accountSkrillEmail, accountNetellerEmail
             , accountPaypalEmail, bankAccountName, bankAccountNumber, bankAccountSortCode, paymentStatus
             , uservip, cutodds_auth } = body.userData;
-    
-       
+
+
         if (!name) return res.status(401).send({ success: false, message: 'Please enter your name.' });
         else if (!username) return res.status(401).send({ success: false, message: 'Please enter your username.' });
         else if (!email) return res.status(401).send({ success: false, message: 'Please enter your email address.' });
@@ -87,7 +97,7 @@ function updateUserAccount(req, res, next) {
             if (!password) return res.status(401).send({ success: false, message: 'Please enter your password.' });
             else if (!cpassword) return res.status(401).send({ success: false, message: 'Please confirm your password.' });
         }
-      
+
         User.findById({
             _id: _id
         })
@@ -116,7 +126,7 @@ function updateUserAccount(req, res, next) {
                                 updateData.paymentStatus = paymentStatus;
                                 updateData.uservip = uservip;
                                 updateData.cutodds_auth = cutodds_auth;
-                                
+
                                 if (req.body.changePass) {
                                     var passwordSalt = genRandomPassword(32);
                                     var userPassword = getCryptedPassword(password, passwordSalt);
@@ -150,7 +160,7 @@ function updateUserAccount(req, res, next) {
 
 
 function getUserAccounts(req, res, next) {
-    console.log('getUserAccounts');
+
     const token = getToken(req.headers);
     if (token) {
         let pageLimit = parseInt(req.query.pageLimit);
@@ -176,6 +186,95 @@ function getUserAccounts(req, res, next) {
             .then(results => {
                 if (results.length === 0) return res.status(200).send({ success: false, 'results': [], totalCount: 0, });
                 User.countDocuments(query)
+                    .then(userCounts => {
+                        return res.status(200).send({ success: true, results: results, totalCount: userCounts });
+
+                    });
+            })
+            .catch(() => {
+                return res.status(400).send({ success: false, msg: 'Server error' });
+            });
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
+function getUserAccountsToExport(req, res, next) {
+
+    const token = getToken(req.headers);
+    if (token) {  
+        let query = { accountDeleted: 0 };      
+        User.find(query).select({ "name": 1,"last_name":1,"username":1,"email":1,"registerDate":1,"moneyBookerId":1,"moneyBookerBonus":1,"accountPhone":1, "_id": 0})
+            .then(results => {
+                if (results.length === 0) return res.status(200).send({ success: false, 'results': [], totalCount: 0, });
+                return res.status(200).send({ success: true, results: results });
+            })
+            .catch(() => {
+                return res.status(400).send({ success: false, msg: 'Server error' });
+            });
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
+
+function getUserTrackingList(req, res, next) {
+
+    const token = getToken(req.headers);
+    if (token) {
+        let pageLimit = parseInt(req.query.pageLimit);
+
+        let skippage = pageLimit * (req.query.page - 1);
+        let query = {};
+        let sortQ = {};
+        if (req.query.searchKey && req.query.searchBy) {
+            query[req.query.searchBy] = new RegExp(req.query.searchKey, 'i');
+        }
+        if (req.query.sortOrder && req.query.sortKey) {
+            let sortOrder = (req.query.sortOrder == 'asc') ? 1 : -1;
+            sortQ[req.query.sortKey] = sortOrder;
+        } else {
+            sortQ = { updated: -1 };
+        }
+
+        UserTracking.find(query, { password: 0 }).skip(skippage).limit(pageLimit).sort(sortQ)
+            .then(results => {
+                if (results.length === 0) return res.status(200).send({ success: false, 'results': [], totalCount: 0, });
+                UserTracking.countDocuments(query)
+                    .then(userCounts => {
+                        return res.status(200).send({ success: true, results: results, totalCount: userCounts });
+
+                    });
+            })
+            .catch(() => {
+                return res.status(400).send({ success: false, msg: 'Server error' });
+            });
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
+
+function getUserTrackingHistory(req, res, next) {
+
+    const token = getToken(req.headers);
+    if (token) {
+        let pageLimit = parseInt(req.query.pageLimit);
+
+        let skippage = pageLimit * (req.query.page - 1);
+        let query = { belongsTo: req.query.id };
+        let sortQ = {};
+        if (req.query.searchKey && req.query.searchBy) {
+            query[req.query.searchBy] = new RegExp(req.query.searchKey, 'i');
+        }
+        if (req.query.sortOrder && req.query.sortKey) {
+            let sortOrder = (req.query.sortOrder == 'asc') ? 1 : -1;
+            sortQ[req.query.sortKey] = sortOrder;
+        } else {
+            sortQ = { created: -1 };
+        }
+
+        UserTrackHistory.find(query, { password: 0 }).skip(skippage).limit(pageLimit).sort(sortQ)
+            .then(results => {
+                if (results.length === 0) return res.status(200).send({ success: false, 'results': [], totalCount: 0, });
+                UserTrackHistory.countDocuments(query)
                     .then(userCounts => {
                         return res.status(200).send({ success: true, results: results, totalCount: userCounts });
 
@@ -230,10 +329,184 @@ function getUserRowById(req, res, next) {
         return res.status(403).send({ success: false, msg: 'Unauthorised' });
     }
 }
+
+function getUserTurnoverReg(req, res, next) {
+
+    const token = getToken(req.headers);
+    if (token) {
+        let pageLimit = parseInt(req.query.pageLimit);
+
+        let skippage = pageLimit * (req.query.page - 1);
+        let query = {};
+        let sortQ = {};
+        if (req.query.searchKey && req.query.searchBy) {
+            query[req.query.searchBy] = new RegExp(req.query.searchKey, 'i');
+        }
+        if (req.query.sortOrder && req.query.sortKey) {
+            let sortOrder = (req.query.sortOrder == 'asc') ? 1 : -1;
+            sortQ[req.query.sortKey] = sortOrder;
+        } else {
+            sortQ = { registrationAdded: -1 };
+        }
+
+        TurnoverRegistration.find(query, { password: 0 }).skip(skippage).limit(pageLimit).sort(sortQ)
+            .then(results => {
+                if (results.length === 0) return res.status(200).send({ success: false, 'results': [], totalCount: 0, });
+                TurnoverRegistration.countDocuments(query)
+                    .then(userCounts => {
+                        return res.status(200).send({ success: true, results: results, totalCount: userCounts });
+
+                    });
+            })
+            .catch(() => {
+                return res.status(400).send({ success: false, msg: 'Server error' });
+            });
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
+
+function updateTurnoverReg(req, res, next) {
+    const token = getToken(req.headers);
+    if (token) {
+        const { body } = req;
+        const { _id, action } = body;
+        if (!_id) return res.send({ success: false, message: 'ID missing.' });
+        else if (!action) return res.send({ success: false, message: 'Action missing.' });
+        TurnoverRegistration.findById({ _id }).then(dateRow => {
+            if (!dateRow) throw { status: 400, msg: 'Invalid request.' };
+            let updateData = {};
+            if (action == 'delete') {
+                TurnoverRegistration.findByIdAndRemove(dateRow._id)
+                    .then(() => {
+                        return res.status(201).send({ success: true, msg: 'Request deleted successfully!' });
+                    })
+                    .catch(() => {
+                        return res.json({ success: false, msg: 'server error' })
+                    })
+            } else {
+                updateData.accountDeleted = 1;
+                updateData.registrationApproved = (action == 'approve') ? Date.now() : 1;
+                let templateName = (action == 'approve') ? 'turnover_application_successful' : 'turnover_application_declined';
+                let message = (action == 'approve') ? 'Request approved successfully' : 'Request declined successfully';
+                TurnoverRegistration.findByIdAndUpdate({ _id: dateRow._id }, { $set: updateData })
+                    .then(() => {
+                        EmailTemplates.findOne({ template_name: templateName })
+                            .then(emailRow => {
+                                var subject = emailRow.template_subject;
+                                var htmlStr = emailRow.template_content;
+                                var subjectHtml = subject.replace(/{SCHEME}/g, dateRow.registrationType);
+                                var customer_type = dateRow.customer_type == 1 ? 'New' : 'Existing';
+                                var resultHtml = htmlStr.replace(/{USER_NAME}/g, dateRow.registrationAccountName);
+                                resultHtml = resultHtml.replace(/{LOGO_PATH}/g, config.logo_path);
+                                resultHtml = resultHtml.replace(/{SITE_NAME}/g, config.site_name);
+                                resultHtml = resultHtml.replace(/{SCHEME}/g, dateRow.registrationType);
+                                resultHtml = resultHtml.replace(/{NAME}/g, dateRow.registrationAccountName);
+                                resultHtml = resultHtml.replace(/{ACCOUNT_ID}/g, dateRow.registrationAccountId);
+                                resultHtml = resultHtml.replace(/{EMAIL}/g, dateRow.registrationAccountEmail);
+                                resultHtml = resultHtml.replace(/{CUS_TYPE}/g, customer_type);
+
+                                var toEmail = dateRow.registrationAccountEmail;
+
+                                sendCustomMail(dateRow.registrationAccountName, toEmail, resultHtml, subjectHtml);
+
+                                return res.status(201).send({ success: true, msg: message });
+                            }).catch(err => {
+                                console.log(err);
+                                return res.json({ success: false, msg: 'server error 4' })
+                            })
+
+
+                    }).catch(() => {
+                        return res.status(400).send({ success: false, msg: 'Server error 2' });
+                    });
+            }
+
+        }).catch(() => {
+            return res.status(400).send({ success: false, msg: 'Server error 1 ' });
+        });
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
+
+function getUserInterested(req, res, next) {
+
+    const token = getToken(req.headers);
+    if (token) {
+        let pageLimit = parseInt(req.query.pageLimit);
+
+        let skippage = pageLimit * (req.query.page - 1);
+        let query = { user_intrested_deleted: 0 };
+        let sortQ = {};
+        if (req.query.searchKey && req.query.searchBy) {
+            query[req.query.searchBy] = new RegExp(req.query.searchKey, 'i');
+        }
+        if (req.query.sortOrder && req.query.sortKey) {
+            let sortOrder = (req.query.sortOrder == 'asc') ? 1 : -1;
+            sortQ[req.query.sortKey] = sortOrder;
+        } else {
+            sortQ = { user_intrested_added: -1 };
+        }
+
+        UserIntrested.find(query, { password: 0 }).skip(skippage).limit(pageLimit).sort(sortQ)
+            .then(results => {
+                if (results.length === 0) return res.status(200).send({ success: false, 'results': [], totalCount: 0, });
+                UserIntrested.countDocuments(query)
+                    .then(userCounts => {
+                        return res.status(200).send({ success: true, results: results, totalCount: userCounts });
+
+                    });
+            })
+            .catch(() => {
+                return res.status(400).send({ success: false, msg: 'Server error' });
+            });
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
+function updateUserInterested(req, res, next) {
+    const token = getToken(req.headers);
+    if (token) {
+        const { body } = req;
+        const { _id, action } = body;
+        if (!_id) return res.send({ success: false, message: 'ID missing.' });
+        else if (!action) return res.send({ success: false, message: 'Action missing.' });
+        UserIntrested.findById({ _id }).then(dateRow => {
+            if (!dateRow) throw { status: 400, msg: 'Invalid request.' };
+            let updateData = {};
+
+            updateData.user_intrested_deleted = Date.now();
+
+            UserIntrested.findByIdAndUpdate({ _id: dateRow._id }, { $set: updateData })
+                .then(() => {
+                    return res.status(201).send({ success: true, msg: 'Request deleted successfully!' });
+                }).catch(() => {
+                    return res.status(400).send({ success: false, msg: 'Server error 2' });
+                });
+
+
+        }).catch((err) => {
+            console.log(err);
+            return res.status(400).send({ success: false, msg: 'Server error 1 ' });
+        });
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
+
 module.exports = {
     updateUserAccount,
     getUserAccounts,
     createUserAccount,
     updateUserStatus,
-    getUserRowById
+    getUserRowById,
+    getUserTrackingList,
+    getUserTrackingHistory,
+    getUserTurnoverReg,
+    updateTurnoverReg,
+    getUserInterested,
+    updateUserInterested,
+    getUserAccountsToExport
 }
+

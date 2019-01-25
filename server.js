@@ -17,8 +17,10 @@ const config = require('./config/config');
  
 // connect to MongoDB
 mongoose.connect(config.LOCAL_DB_URL, { useNewUrlParser: true });
+ 
+app.use('/resources', express.static(__dirname + '/uploads'));
 // file upload
-app.use(fileUpload());
+app.use(fileUpload({createParentPath:true}));
 // use cors and helmet
 app.use(cors());
 app.use(helmet());
@@ -29,7 +31,7 @@ app.use(bodyParser.urlencoded({extended: false}));
 
 // serve static files from template
 app.set('view engine', 'ejs');
-app.use(express.static('public'));
+
 app.use(session({ 
     secret: config.secret,
     resave: true,

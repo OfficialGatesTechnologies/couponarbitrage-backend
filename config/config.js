@@ -3,7 +3,7 @@ if (process.env.NODE_ENV !== 'test') process.env.NODE_ENV = 'dev';
 const LOCAL_DB_URL = `mongodb://localhost:27017/couponarbitrage`;
 const DB_URL = 'mongodb://un:pw@host:39841/db';
 
-// put secret in heroku ENV variables
+ 
 const secret = 'XX4478HDNDnsndHHGK238ma';
 const site_name = 'Couponarbitrage';
 const base_url = 'http://localhost:3000/';
@@ -14,6 +14,5 @@ module.exports = {
     secret: secret,
     site_name: site_name,
     base_url: base_url,
-    logo_path: logo_path,
-
+    logo_path: logo_path
 };

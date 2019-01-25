@@ -7,7 +7,14 @@ const {
     getUserAccounts,
     createUserAccount,
     updateUserStatus,
-    getUserRowById
+    getUserRowById,
+    getUserTrackingList,
+    getUserTrackingHistory,
+    getUserTurnoverReg,
+    updateTurnoverReg,
+    getUserInterested,
+    updateUserInterested,
+    getUserAccountsToExport
 } = require('../../controllers/admin/user.controller');
 
 router.post('/update-useraccount', passport.authenticate('admin', {
@@ -20,6 +27,9 @@ router.post('/create-user', passport.authenticate('admin', {
 router.get('/list', passport.authenticate('admin', {
     session: false
 }), getUserAccounts);
+router.get('/export-user', passport.authenticate('admin', {
+    session: false
+}), getUserAccountsToExport);
 router.post('/update-accounts', passport.authenticate('admin', {
     session: false
 }), updateUserStatus);
@@ -27,5 +37,23 @@ router.post('/update-accounts', passport.authenticate('admin', {
 router.get('/user-row', passport.authenticate('admin', {
     session: false
 }), getUserRowById);
+router.get('/user-tracking', passport.authenticate('admin', {
+    session: false
+}), getUserTrackingList);
+router.get('/user-tracking-history', passport.authenticate('admin', {
+    session: false
+}), getUserTrackingHistory);
+router.get('/turnover-registration', passport.authenticate('admin', {
+    session: false
+}), getUserTurnoverReg);
 
+router.post('/update-turnover-registration', passport.authenticate('admin', {
+    session: false
+}), updateTurnoverReg)
+router.get('/user-intrested', passport.authenticate('admin', {
+    session: false
+}), getUserInterested)
+router.post('/update-user-intrested', passport.authenticate('admin', {
+    session: false
+}), updateUserInterested)
 module.exports = router;

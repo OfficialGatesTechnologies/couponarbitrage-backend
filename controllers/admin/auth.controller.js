@@ -15,17 +15,17 @@ function createNewAdmin(req, res, next) {
             firstName: req.body.firstName,
             lastName: req.body.lastName,
             username: req.body.username,
-            email: req.body.email,     
+            email: req.body.email,
             type: "System",
             accessModules: "admin",
-            privileges:"admin",
-            isSuperAdmin:1
+            privileges: "admin",
+            isSuperAdmin: 1
         });
 
         var passwordSalt = apiHeplers.genRandomPassword(32);
         var adminPassword = apiHeplers.getCryptedPassword(req.body.password, passwordSalt);
         newAdmin.password = adminPassword + ':' + passwordSalt;
-        // save the user
+       
         newAdmin.save(function (err) {
             if (err) {
                 return res.json({ success: false, msg: err });
@@ -162,32 +162,32 @@ function resetPass(req, res, next) {
         if (resBody.success !== undefined && !resBody.success) {
             return res.status(401).send({ success: false, msg: ' Captcha validation failed' });
         }
-    var passwordSalt = apiHeplers.genRandomPassword(32);
+        var passwordSalt = apiHeplers.genRandomPassword(32);
 
-    Admin.findOne({
-        resetPasswordToken: req.body.token,
-        resetPasswordExpires: {
-            $gt: Date.now()
-        }
-    }).then(user => {
-        if (!user) throw { status: 400, msg: 'Password reset token is invalid or has expired' };
-        var adminPassword = apiHeplers.getCryptedPassword(req.body.password, passwordSalt);
-        var newPassword = adminPassword + ':' + passwordSalt;
-        Admin.findByIdAndUpdate({ _id: user._id }, { $set: { password: newPassword, resetPasswordExpires: undefined, resetPasswordToken: undefined } })
-            .then(() => {
-                return res.status(201).send({ success: true, msg: 'Your password was reset successfully. Please login!' });
-            })
-            .catch((err) => {
-                console.log(err);
-                return res.json({ success: false, msg: 'server error 11' })
-            })
+        Admin.findOne({
+            resetPasswordToken: req.body.token,
+            resetPasswordExpires: {
+                $gt: Date.now()
+            }
+        }).then(user => {
+            if (!user) throw { status: 400, msg: 'Password reset token is invalid or has expired' };
+            var adminPassword = apiHeplers.getCryptedPassword(req.body.password, passwordSalt);
+            var newPassword = adminPassword + ':' + passwordSalt;
+            Admin.findByIdAndUpdate({ _id: user._id }, { $set: { password: newPassword, resetPasswordExpires: undefined, resetPasswordToken: undefined } })
+                .then(() => {
+                    return res.status(201).send({ success: true, msg: 'Your password was reset successfully. Please login!' });
+                })
+                .catch((err) => {
+                    console.log(err);
+                    return res.json({ success: false, msg: 'server error 11' })
+                })
 
-    })
-        .catch(err => {
-            console.log(err);
-            if (err.status === 400) res.status(400).send({ success: false, msg: err.msg });
-            else return next({ status: 500, message: 'server error 333' });
         })
+            .catch(err => {
+                console.log(err);
+                if (err.status === 400) res.status(400).send({ success: false, msg: err.msg });
+                else return next({ status: 500, message: 'server error 333' });
+            })
     });
 }
 
