@@ -11,7 +11,12 @@ const {
     createAffiliate,
     updateAffiliateNetworks,
     updateAffiliateStatus,
-    getAffiliateRowById
+    getAffiliateRowById,
+    createTag,
+    updateTags,
+    getTags,
+    updateTagStatus,
+    getTagRowById
 } = require('../../controllers/admin/masterdata.controller');
 
 
@@ -41,4 +46,22 @@ router.post('/update-affiliate-status', passport.authenticate('admin', {
 router.get('/affiliate-row', passport.authenticate('admin', {
     session: false
 }), getAffiliateRowById);
+
+// Tags
+
+router.get('/tag-list', passport.authenticate('admin', {
+    session: false
+}), getTags);
+router.post('/create-tag', passport.authenticate('admin', {
+    session: false
+}), createTag);
+router.post('/update-tag', passport.authenticate('admin', {
+    session: false
+}), updateTags);
+router.post('/update-tag-status', passport.authenticate('admin', {
+    session: false
+}), updateTagStatus);
+router.get('/tag-row', passport.authenticate('admin', {
+    session: false
+}), getTagRowById);
 module.exports = router;

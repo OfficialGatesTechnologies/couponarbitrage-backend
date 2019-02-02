@@ -1,5 +1,6 @@
 const EmailTemplates = require('../../models/Email_template');
 const AffiliateNetwork = require('../../models/Affiliate_network');
+const Tags = require('../../models/Tags');
 const {
     getToken,
     sendCustomMail
@@ -243,6 +244,149 @@ function getAffiliateRowById(req, res, next) {
     }
 }
 
+
+function createTag(req, res, next) {
+    const token = getToken(req.headers);
+    if (token) {
+        const { body } = req;
+        const { tagName } = body.tagData;
+        if (!tagName) return res.status(400).send({ success: false, message: 'Please enter the name.' });
+        Tags.find({ tagName: tagName, deleted: 0 }).then(existCat => {
+            if (existCat.length > 0) return res.status(400).send({ success: false, msg: 'Tag name already exists.' });
+            const newCat = new Tags();
+            newCat.tagName = tagName;
+            
+
+            newCat.save((err, doc) => {
+                if (err) {
+                    return res.status(400).send({ success: true, msg: 'Server error!' });
+                }
+                return res.status(201).send({ success: true, msg: 'Tag created successfully!' });
+            });
+
+        }).catch((err) => {
+            console.log('err 1 ', err);
+            return res.status(400).send({ success: false, msg: 'Server error 11 ' });
+        });
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
+
+function updateTags(req, res, next) {
+    const token = getToken(req.headers);
+    if (token) {
+
+        const { body } = req;
+        const { _id, tagName } = body.tagData;
+        if (!tagName) return res.status(400).send({ success: false, message: 'Please enter the name.' });
+
+        Tags.findById({
+            _id: _id
+        }).then(tagRow => {
+            if (!tagRow) return res.status(401).send({ success: false, message: 'Invalid request.' });
+            Tags.find({ tagName: tagName, deleted: 0, _id: { $ne: _id } })
+                .then(existCat => {
+                    if (existCat.length > 0) return res.status(400).send({ success: false, msg: 'Tag name  already exists.' });
+                    let updateData = {};
+                    updateData.tagName = tagName;
+                   
+
+                    Tags.findByIdAndUpdate({ _id: tagRow._id }, { $set: updateData })
+                        .then(() => {
+                            return res.status(201).send({ success: true, msg: 'Tag updated successfully' });
+                        }).catch((err) => {
+                            return res.status(500).send({ success: false, msg: 'server error' })
+                        })
+                }).catch((err) => {
+                    return res.status(500).send({ success: false, msg: 'server error' })
+                })
+        }).catch(err => {
+                if (err.status === 404) res.status(400).send({ success: false, msg: err.msg })
+                else return next({ status: 500, msg: 'server error' })
+            })
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
+
+
+function getTags(req, res, next) {
+
+    const token = getToken(req.headers);
+    if (token) {
+        let pageLimit = parseInt(req.query.pageLimit);
+
+        let skippage = pageLimit * (req.query.page - 1);
+        let query = {  };
+        let sortQ = {};
+        if (req.query.searchKey && req.query.searchBy) {
+            query[req.query.searchBy] = new RegExp(req.query.searchKey, 'i');
+        }
+
+        if (req.query.sortOrder && req.query.sortKey) {
+            let sortOrder = (req.query.sortOrder == 'asc') ? 1 : -1;
+            sortQ[req.query.sortKey] = sortOrder;
+        } else {
+            sortQ = { tagName: -1 };
+        }
+
+        Tags.find(query).skip(skippage).limit(pageLimit).sort(sortQ)
+            .then(results => {
+                if (results.length === 0) return res.status(200).send({ success: false, 'results': [], totalCount: 0, });
+                Tags.countDocuments(query)
+                    .then(totalCounts => {
+                        return res.status(200).send({ success: true, results: results, totalCount: totalCounts });
+                    });
+            })
+            .catch(() => {
+                return res.status(400).send({ success: false, msg: 'Server error' });
+            });
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
+
+
+function updateTagStatus(req, res, next) {
+    const token = getToken(req.headers);
+    if (token) {
+        const { body } = req;
+        const { _id, action } = body;
+        if (!_id) return res.send({ success: false, message: 'ID missing.' });
+        else if (!action) return res.send({ success: false, message: 'Action missing.' });
+        Tags.findById({ _id }).then(tagRow => {
+            if (!tagRow) throw { status: 400, msg: 'Invalid request.' };
+
+
+            Tags.findByIdAndRemove({ _id: tagRow._id })
+            .then(() => {
+                return res.status(201).send({ success: true, msg: 'Tag deleted successfully!' });
+            }).catch(() => {
+                return res.json({ success: false, msg: 'Server error' });
+            });
+ 
+        }).catch(() => {
+            return res.status(400).send({ success: false, msg: 'Server error' });
+        });
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
+function getTagRowById(req, res, next) {
+    const token = getToken(req.headers);
+    if (token) {
+        Tags.findById(req.query._id).then(tagRow => {
+            if (tagRow.length === 0) return res.status(200).send({ success: false });
+            return res.status(200).send({ success: true, 'results': tagRow });
+        }).catch(() => {
+            return res.status(400).send({ success: false, msg: 'Server error' });
+        });
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
+
 module.exports = {
     getEmailTemplates,
     getEmailRowById,
@@ -251,7 +395,12 @@ module.exports = {
     createAffiliate,
     updateAffiliateStatus,
     updateAffiliateNetworks,
-    getAffiliateRowById
+    getAffiliateRowById,
+    createTag,
+    updateTags,
+    getTags,
+    updateTagStatus,
+    getTagRowById
 
 }
 
