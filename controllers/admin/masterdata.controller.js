@@ -1,6 +1,7 @@
 const EmailTemplates = require('../../models/Email_template');
 const AffiliateNetwork = require('../../models/Affiliate_network');
 const Tags = require('../../models/Tags');
+const SiteConfig = require('../../models/Site_config');
 const {
     getToken,
     sendCustomMail
@@ -103,7 +104,7 @@ function createAffiliate(req, res, next) {
     const token = getToken(req.headers);
     if (token) {
         const { body } = req;
-        const { title,identifier } = body.catData;
+        const { title, identifier } = body.catData;
         if (!title) return res.status(400).send({ success: false, message: 'Please enter the name.' });
         AffiliateNetwork.find({ title: title, deleted: 0 }).then(existCat => {
             if (existCat.length > 0) return res.status(400).send({ success: false, msg: 'Affiliate name already exists.' });
@@ -132,7 +133,7 @@ function updateAffiliateNetworks(req, res, next) {
     if (token) {
 
         const { body } = req;
-        const { _id, title,identifier } = body.catData;
+        const { _id, title, identifier } = body.catData;
         if (!title) return res.status(400).send({ success: false, message: 'Please enter the name.' });
 
         AffiliateNetwork.findById({
@@ -156,9 +157,9 @@ function updateAffiliateNetworks(req, res, next) {
                     return res.status(500).send({ success: false, msg: 'server error' })
                 })
         }).catch(err => {
-                if (err.status === 404) res.status(400).send({ success: false, msg: err.msg })
-                else return next({ status: 500, msg: 'server error' })
-            })
+            if (err.status === 404) res.status(400).send({ success: false, msg: err.msg })
+            else return next({ status: 500, msg: 'server error' })
+        })
     } else {
         return res.status(403).send({ success: false, msg: 'Unauthorised' });
     }
@@ -255,7 +256,7 @@ function createTag(req, res, next) {
             if (existCat.length > 0) return res.status(400).send({ success: false, msg: 'Tag name already exists.' });
             const newCat = new Tags();
             newCat.tagName = tagName;
-            
+
 
             newCat.save((err, doc) => {
                 if (err) {
@@ -265,7 +266,7 @@ function createTag(req, res, next) {
             });
 
         }).catch((err) => {
-            console.log('err 1 ', err);
+
             return res.status(400).send({ success: false, msg: 'Server error 11 ' });
         });
     } else {
@@ -290,8 +291,6 @@ function updateTags(req, res, next) {
                     if (existCat.length > 0) return res.status(400).send({ success: false, msg: 'Tag name  already exists.' });
                     let updateData = {};
                     updateData.tagName = tagName;
-                   
-
                     Tags.findByIdAndUpdate({ _id: tagRow._id }, { $set: updateData })
                         .then(() => {
                             return res.status(201).send({ success: true, msg: 'Tag updated successfully' });
@@ -302,9 +301,9 @@ function updateTags(req, res, next) {
                     return res.status(500).send({ success: false, msg: 'server error' })
                 })
         }).catch(err => {
-                if (err.status === 404) res.status(400).send({ success: false, msg: err.msg })
-                else return next({ status: 500, msg: 'server error' })
-            })
+            if (err.status === 404) res.status(400).send({ success: false, msg: err.msg })
+            else return next({ status: 500, msg: 'server error' })
+        })
     } else {
         return res.status(403).send({ success: false, msg: 'Unauthorised' });
     }
@@ -318,7 +317,7 @@ function getTags(req, res, next) {
         let pageLimit = parseInt(req.query.pageLimit);
 
         let skippage = pageLimit * (req.query.page - 1);
-        let query = {  };
+        let query = {};
         let sortQ = {};
         if (req.query.searchKey && req.query.searchBy) {
             query[req.query.searchBy] = new RegExp(req.query.searchKey, 'i');
@@ -360,12 +359,12 @@ function updateTagStatus(req, res, next) {
 
 
             Tags.findByIdAndRemove({ _id: tagRow._id })
-            .then(() => {
-                return res.status(201).send({ success: true, msg: 'Tag deleted successfully!' });
-            }).catch(() => {
-                return res.json({ success: false, msg: 'Server error' });
-            });
- 
+                .then(() => {
+                    return res.status(201).send({ success: true, msg: 'Tag deleted successfully!' });
+                }).catch(() => {
+                    return res.json({ success: false, msg: 'Server error' });
+                });
+
         }).catch(() => {
             return res.status(400).send({ success: false, msg: 'Server error' });
         });
@@ -387,6 +386,52 @@ function getTagRowById(req, res, next) {
     }
 }
 
+function getConfigRow(req, res, next) {
+    const token = getToken(req.headers);
+    if (token) {
+        SiteConfig.findOne({ config_module: req.query.module }).then(configRow => {
+            if (configRow.length === 0) return res.status(200).send({ success: false });
+            return res.status(200).send({ success: true, 'results': configRow });
+        }).catch((err) => {
+            return res.status(400).send({ success: false, msg: err });
+        });
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
+
+function updateConfig(req, res, next) {
+    const token = getToken(req.headers);
+    if (token) {
+        const { body } = req;
+        let updateData = {};
+        updateData.config_module = body.config_module;
+        updateData.facebook_url = body.facebook_url;
+        updateData.twitter_url = body.twitter_url;
+        updateData.google_url = body.google_url;
+        updateData.instagram_url = body.instagram_url;
+        // updateData.adwords_status = body.adwords_status;
+        updateData.sbobet_cashback_fromdate = body.sbobet_cashback_fromdate;
+        updateData.sbobet_cashback_todate = body.sbobet_cashback_todate;
+        updateData.sbobet_cashback = isNaN(parseFloat(body.sbobet_cashback)) ? 0 : parseFloat(body.sbobet_cashback);
+        updateData.skrill_cashback_value = isNaN(parseFloat(body.skrill_cashback_value)) ? 0 : parseFloat(body.skrill_cashback_value) ;
+        updateData.sbobet_cashback_value = isNaN(parseFloat(body.sbobet_cashback_value)) ? 0 : parseFloat(body.sbobet_cashback_value) ;
+        updateData.neteller_cashback_value = isNaN(parseFloat(body.neteller_cashback_value)) ? 0 : parseFloat(body.neteller_cashback_value) ;
+        updateData.ecopayz_cashback_value = isNaN(parseFloat(body.ecopayz_cashback_value)) ? 0 : parseFloat(body.ecopayz_cashback_value) ;
+        updateData.app_status = body.app_status;
+        updateData.app_link = body.app_link;
+        updateData.app_version = body.app_version;
+        SiteConfig.update({config_module: body.config_module}, updateData, {upsert: true}, function (err) {
+            if (err) {
+                return res.status(400).send({ success: true, msg: 'Server error!' });
+            }
+            return res.status(201).send({ success: true, msg: 'Config updated successfully!' });
+        });          
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
+
 module.exports = {
     getEmailTemplates,
     getEmailRowById,
@@ -400,7 +445,9 @@ module.exports = {
     updateTags,
     getTags,
     updateTagStatus,
-    getTagRowById
+    getTagRowById,
+    getConfigRow,
+    updateConfig
 
 }
 

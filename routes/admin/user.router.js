@@ -14,7 +14,8 @@ const {
     updateTurnoverReg,
     getUserInterested,
     updateUserInterested,
-    getUserAccountsToExport
+    getUserAccountsToExport,
+    searchUsers
 } = require('../../controllers/admin/user.controller');
 
 router.post('/update-useraccount', passport.authenticate('admin', {
@@ -33,7 +34,9 @@ router.get('/export-user', passport.authenticate('admin', {
 router.post('/update-accounts', passport.authenticate('admin', {
     session: false
 }), updateUserStatus);
-
+router.get('/search-users', passport.authenticate('admin', {
+    session: false
+}), searchUsers);
 router.get('/user-row', passport.authenticate('admin', {
     session: false
 }), getUserRowById);

@@ -494,6 +494,22 @@ function updateUserInterested(req, res, next) {
         return res.status(403).send({ success: false, msg: 'Unauthorised' });
     }
 }
+function searchUsers(req, res) {
+    const token = getToken(req.headers);
+    if (token) {
+        let query = { accountDeleted: 0 };
+        if (req.query.query) {
+            query['username'] = new RegExp(req.query.query, 'i');
+        } 
+       
+        User.find(query).select({ "name": 1,"last_name":1,"username":1,"email":1, "_id": 1,"epiCode":1})
+            .then(results => {
+                return res.status(200).send({ success: true, results: results });
+            }).catch(() => res.status(400).send({ success: false, msg: 'Server error' }));
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
 
 module.exports = {
     updateUserAccount,
@@ -507,6 +523,7 @@ module.exports = {
     updateTurnoverReg,
     getUserInterested,
     updateUserInterested,
-    getUserAccountsToExport
+    getUserAccountsToExport,
+    searchUsers
 }
 

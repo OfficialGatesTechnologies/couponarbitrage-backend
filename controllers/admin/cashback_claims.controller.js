@@ -104,6 +104,13 @@ function getCashbackCliams(req, res) {
         if (req.query.filterByStore && req.query.filterByStore != 'all') {
             query['store_id'] = req.query.filterByStore;
         } 
+        if(req.query.status && req.query.status == 'unconfirmed')query['status'] = 'P';
+        else if(req.query.status && req.query.status == 'unapproved')query['status'] = 'N';
+        else if(req.query.status && req.query.status == 'finished')query['status'] = 'C';
+        else if(req.query.status && req.query.status == 'payable')query['status'] = 'A';
+        else if(req.query.status && req.query.status == 'paid')query['status'] = 'S';
+        else if(req.query.status && req.query.status == 'more_info')query['status'] = 'M';
+        else if(req.query.status && req.query.status == 'cancelled')query['status'] = 'X';
         if (req.query.sortOrder && req.query.sortKey) {
             let sortOrder = (req.query.sortOrder == 'asc') ? 1 : -1;
             sortQ[req.query.sortKey] = sortOrder;

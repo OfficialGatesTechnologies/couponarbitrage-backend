@@ -16,7 +16,9 @@ const {
     updateTags,
     getTags,
     updateTagStatus,
-    getTagRowById
+    getTagRowById,
+    getConfigRow,
+    updateConfig
 } = require('../../controllers/admin/masterdata.controller');
 
 
@@ -64,4 +66,13 @@ router.post('/update-tag-status', passport.authenticate('admin', {
 router.get('/tag-row', passport.authenticate('admin', {
     session: false
 }), getTagRowById);
+
+// Others
+router.get('/config-row', passport.authenticate('admin', {
+    session: false
+}), getConfigRow);
+
+router.post('/update-config', passport.authenticate('admin', {
+    session: false
+}), updateConfig);
 module.exports = router;
