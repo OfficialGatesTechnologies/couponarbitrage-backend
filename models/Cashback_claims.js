@@ -44,9 +44,8 @@ const CashbackClaims = new Schema({
   },
   tags: Array,
   raf_case_id: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'cashback_cliams',
-    required: true
+    type: String,
+    default: 0
   },
   app_balance: Number,
   date_paid: {

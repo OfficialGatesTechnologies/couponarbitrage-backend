@@ -26,10 +26,15 @@ const CashbackCredits = new Schema({
     type: Number,
     default: 0
   },
-  revenueCreditPaid: {
+  revenueRafBonus: {
     type: Number,
     default: 0
   },
+  revenueCreditPaid: {
+    type: String,
+    default: ""
+  },
+
   revenueCreditAdded: {
     type: Date,
     default: Date.now()

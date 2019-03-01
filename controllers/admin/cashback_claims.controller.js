@@ -2,8 +2,7 @@ const CashbackClaims = require('../../models/cashback_claims');
 const CashbackStores = require('../../models/Cashback_stores');
 const CashbackTransaction = require('../../models/Cashback_transactions');
 const Tags = require('../../models/Tags');
-const { getToken, YouTubeGetID, convertToSlug } = require('../../utils/api.helpers');
-const path = require('path');
+const { getToken } = require('../../utils/api.helpers');
 
 
 function updateClaims(req, res, next) {
@@ -14,8 +13,6 @@ function updateClaims(req, res, next) {
         const { _id } = body;
 
         var status = body.status;
-        let sendMail = false;
-        let emailTempName = '';
         CashbackClaims.findById({
             _id: _id
         }).then(claimRow => {
@@ -33,8 +30,6 @@ function updateClaims(req, res, next) {
                 .then(() => {
 
                     if (status == 'X') {
-                        sendMail = true;
-                        emailTempName = 'cancelled_cashback_claim';
                         CashbackTransaction.findOneAndRemove({ user_id: claimRow.user_id, case_id: claimRow._id })
                             .then(() => {
                                 return res.status(201).send({ success: true, msg: 'Claim updated successfully' });
@@ -43,10 +38,8 @@ function updateClaims(req, res, next) {
                             });
 
                     } else if (status == 'c') {
-                        emailTempName = 'confirmed_cashback_claim';
                     } else if (status == 'A') {
                         console.log('status adad ad', status);
-                        emailTempName = 'payable_cashback_claim';
                         CashbackTransaction.find({ user_id: claimRow.user_id, case_id: claimRow._id })
                             .then((existCashback) => {
                                 if (existCashback.length > 0) {
@@ -64,7 +57,7 @@ function updateClaims(req, res, next) {
                                     newTxnData.value = claimRow.amount;
                                     newTxnData.cb_type = claimRow.cb_type;
                                     newTxnData.trans_date = body.date_confirmed;
-                                    newTxnData.save((err) => {
+                                    newTxnData.save(() => {
                                         return res.status(201).send({ success: true, msg: 'Claim updated successfully' });
                                     });
                                 }

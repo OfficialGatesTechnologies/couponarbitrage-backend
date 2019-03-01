@@ -3,21 +3,25 @@ mongoose.Promise = global.Promise;
 const Schema = mongoose.Schema;
 
 
-const CashbackTransactions = new Schema({
+const TurnoverTransactions = new Schema({
 
   user_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'jos_user',
     required: true
   },
-  case_id: {
+  tb_type: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'cashback_cliams',
+    ref: 'jos_menu',
     required: true
   },
-  cb_type: {
+  cashback_user_id: {
     type: Number,
     required: true
+  },
+  scheme: {
+    type: Number,
+    default: 0
   },
   value: {
     type: Number,
@@ -32,15 +36,7 @@ const CashbackTransactions = new Schema({
     type: Date,
     default: 0
   },
-  join_date: {
-    type: Date,
-    default: 0
-  },
   notes: String,
-  raf_bonus: {
-    type: Number,
-    default: 0
-  },
   status: {
     type: Number,
     default: 0
@@ -57,4 +53,4 @@ const CashbackTransactions = new Schema({
 
 });
 
-module.exports = mongoose.model('cashback_transaction', CashbackTransactions);
+module.exports = mongoose.model('turnover_transaction', TurnoverTransactions);
