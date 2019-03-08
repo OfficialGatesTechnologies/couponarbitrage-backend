@@ -10,7 +10,7 @@ const cashbackPayoutRouter = require('./admin/cashback_payout.router');
 const masterdataRouter = require('./admin/masterdata.router');
 const menuRouter = require('./admin/menu.router');
 const articleRouter = require('./admin/articles.router');
-
+const bookmakerRouter = require('./admin/bookmaker.router');
 
 // routes
 router.use('/auth', authRouter);
@@ -23,4 +23,5 @@ router.use('/cashback-payouts', cashbackPayoutRouter);
 router.use('/masterdata', masterdataRouter);
 router.use('/menu', menuRouter);
 router.use('/article', articleRouter);
+router.use('/bookmaker', bookmakerRouter);
 module.exports = router;
