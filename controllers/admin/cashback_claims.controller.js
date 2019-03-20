@@ -39,7 +39,7 @@ function updateClaims(req, res, next) {
 
                     } else if (status == 'c') {
                     } else if (status == 'A') {
-                        console.log('status adad ad', status);
+                        
                         CashbackTransaction.find({ user_id: claimRow.user_id, case_id: claimRow._id })
                             .then((existCashback) => {
                                 if (existCashback.length > 0) {

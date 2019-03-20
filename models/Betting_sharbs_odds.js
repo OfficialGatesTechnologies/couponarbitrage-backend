@@ -6,6 +6,10 @@ const bettingSharbsOddSchema = new Schema({
     type: Number,
     default: 0
   },
+  odds_docid: {
+    type: String,
+    default: ''
+  },
   odds_matchid: {
     type: Number,
     default: 0
@@ -15,8 +19,8 @@ const bettingSharbsOddSchema = new Schema({
     default: 0
   },
   odds_market: {
-    type: Number,
-    default: 0
+    type: String,
+    default: ''
   },
   odds_bm_market: {
     type: Number,
@@ -99,5 +103,10 @@ bettingSharbsOddSchema.virtual('competition', {
   foreignField: 'c_id',
   justOne: true,
 });
-
+bettingSharbsOddSchema.virtual('bookmaker', {
+  ref: 'bookmakers',
+  localField: 'odds_bmid',
+  foreignField: 'bm_id',
+  justOne: true,
+});
 module.exports = mongoose.model('betting_sharbs_odds', bettingSharbsOddSchema);
