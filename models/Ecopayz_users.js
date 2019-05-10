@@ -25,6 +25,10 @@ const EcopayzUsers = new Schema({
   site_commission:{
     type: Number,
     default: 0
+  },
+  user_commission:{
+    type: Number,
+    default: 0
   }
 });
 

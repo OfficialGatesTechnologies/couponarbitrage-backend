@@ -131,6 +131,10 @@ const SkrillCashback = new Schema({
     type: Number,
     default: 0
   },
+  userCommission: {
+    type: Number,
+    default: 0
+  },
   is_new: {
     type: String,
     default: 0

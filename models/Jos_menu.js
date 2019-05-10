@@ -43,6 +43,18 @@ const JosMenu = new Schema({
     type: Number,
     default: 0
   },
+  showInLandingPageMenu:{
+    type: Number,
+    default: 0
+  },
+  showInMenu:{
+    type: Number,
+    default: 0
+  },
+  defaultMenuItem:{
+    type: Number,
+    default: 0
+  },
   metatitle: {
     type: String,
     default: ''
@@ -68,6 +80,11 @@ const JosMenu = new Schema({
     default: 0
   }
 
+}, { toJSON: { virtuals: true }});
+JosMenu.virtual('submenus', {
+  ref: 'jos_menu',  
+  localField: '_id',  
+  foreignField: 'parent',  
 });
 
 module.exports = mongoose.model('jos_menu', JosMenu, 'jos_menu');

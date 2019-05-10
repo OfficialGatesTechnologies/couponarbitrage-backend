@@ -1,6 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const adminRouter = require('./admin.router');
+const authRouter = require('./auth.router');
+const offerRouter = require('./offer.router');
+const commonRouter = require('./common.router');
+const accountsRouter = require('./accounts.router');
 router.use('/admin', adminRouter);
-
+router.use('/auth', authRouter);
+router.use('/offers', offerRouter);
+router.use('/common', commonRouter);
+router.use('/account', accountsRouter);
 module.exports = router;

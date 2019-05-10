@@ -110,10 +110,27 @@ function getCashbackCliams(req, res) {
         } else {
             sortQ = { date_applied: -1 };
         }
- 
+        console.log(req.query.status);
+
+        // { 
+        //     path: 'pages',
+        //     populate: {
+        //       path: 'components',
+        //       model: 'Component'
+        //     } 
+        //  }
+
         CashbackClaims.find(query)
             .populate('user_id')
-            .populate('store_id').populate('aff_id').skip(skippage).limit(pageLimit).sort(sortQ)
+            .populate( 
+            { 
+                path: 'store_id',
+                populate: {
+                  path: 'network_id',
+                  model: 'affiliate_network'
+                } 
+             }
+            ).populate('aff_id').skip(skippage).limit(pageLimit).sort(sortQ)
             .then(results => {
                 if (results.length === 0) return res.status(200).send({ success: false, 'results': [], totalCount: 0, });
                 CashbackClaims.countDocuments(query)

@@ -1,10 +1,7 @@
 const mongoose = require('mongoose');
 mongoose.Promise = global.Promise;
 const Schema = mongoose.Schema;
-
-
 const CashbackStores = new Schema({
-
   aid: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'cashback_sites',
@@ -15,6 +12,7 @@ const CashbackStores = new Schema({
     ref: 'cashback_caregories',
     required: true
   },
+  parent_id: String,
   network_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'affiliate_network',
@@ -112,7 +110,27 @@ const CashbackStores = new Schema({
     type: Number,
     default: 0
   }
+}, { toJSON: { virtuals: true } });
+CashbackStores.virtual('offers', {
+  ref: 'cashback_offers',
+  localField: '_id',
+  foreignField: 'store_id',
 });
-
-
+CashbackStores.virtual('voucherCodes', {
+  ref: 'cashback_vouchers',
+  localField: '_id',
+  foreignField: 'store_id',
+});
+CashbackStores.virtual('isExistClaim', {
+  ref: 'cashback_cliams',
+  localField: '_id',
+  foreignField: 'store_id',
+  justOne: true,  
+});
+CashbackStores.virtual('isExistSiteClaim', {
+  ref: 'cashback_cliams',
+  localField: 'aid',
+  foreignField: 'aff_id',
+  justOne: true,  
+});
 module.exports = mongoose.model('cashback_stores', CashbackStores);

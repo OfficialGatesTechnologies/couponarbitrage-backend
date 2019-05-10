@@ -35,6 +35,10 @@ const EcopayzCashback = new Schema({
     type: Number,
     default: 0
   },
+  userCommission: {
+    type: Number,
+    default: 0
+  },
   creditDate: {
     type: String,
     default: 0

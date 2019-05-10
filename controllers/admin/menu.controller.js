@@ -8,6 +8,7 @@ function createMenu(req, res) {
         const { body } = req;
         const { name, type, link, parent,
             access, ordering, introtext, description, defaultMenuItem, metatitle, metakey, metadesc, metadata
+            ,showInLandingPageMenu,showInMenu
         } = body;
         if (!name) return res.status(400).send({ success: false, message: 'Please enter the title.' });
         else if (!type) return res.status(400).send({ success: false, message: 'Please select the menu type.' });
@@ -30,6 +31,8 @@ function createMenu(req, res) {
             newMenu.link = link;
             newMenu.parent = parent;
             newMenu.access = parseInt(access);
+            updateData.showInMenu = parseInt(showInMenu);
+            updateData.showInLandingPageMenu = parseInt(showInLandingPageMenu);
             newMenu.ordering = ordering;
             newMenu.introtext = introtext;
             newMenu.description = description;
@@ -63,6 +66,7 @@ function updateMenu(req, res, next) {
         const { body } = req;
         const { _id, name, type, link, parent,
             access, ordering, introtext, description, defaultMenuItem, metatitle, metakey, metadesc, metadata
+            ,showInLandingPageMenu,showInMenu
         } = body;
         if (!name) return res.status(400).send({ success: false, message: 'Please enter the title.' });
         else if (!type) return res.status(400).send({ success: false, message: 'Please select the menu type.' });
@@ -85,11 +89,17 @@ function updateMenu(req, res, next) {
                         updateData.imageFile = newFileName;
                     }
                     updateData.name = name;
-                    updateData.type = type;
-                    updateData.link = link;
-                    updateData.parent = parent;
+                    if(dataRow.defaultMenuItem === 0){
+                        updateData.type = type;
+                        updateData.link = link;
+                        updateData.parent = parent;
+                    }
+                  
+
                     updateData.access = parseInt(access);
                     updateData.ordering = (ordering) ? parseInt(ordering) : 0;
+                    updateData.showInMenu = parseInt(showInMenu);
+                    updateData.showInLandingPageMenu = parseInt(showInLandingPageMenu);
                     updateData.introtext = introtext;
                     updateData.description = description;
                     updateData.defaultMenuItem = defaultMenuItem;

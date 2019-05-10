@@ -119,6 +119,7 @@ function updateStore(req, res, next) {
                     }
                     updateData.aid = body.aid;
                     updateData.cat_id = body.cat_id;
+                    updateData.parent_id = body.parent_id;
                     updateData.network_id = body.network_id;
                     updateData.title = body.title;
                     updateData.url_key = convertToSlug(body.aidname + ' ' + body.title + '-cashback');
@@ -217,7 +218,9 @@ function getDropDownData(req, res) {
         let affquery = { deleted: 0 };
         let bannerFileList = [];
         const bannerFolder = path.join(__dirname, '../../uploads/cashbackbanners/');
-
+        if (req.query.parentId) {
+            cquery['cat_parent'] = req.query.parentId;
+        }
         fs.readdirSync(bannerFolder).forEach(file => {
             bannerFileList.push(file);
         })

@@ -20,7 +20,7 @@ const turnoverRegistration = new Schema({
   },
   registrationAccountId: {
     type: String,
-    required: true
+    default: 0
   },
   
   registrationCurrency: {

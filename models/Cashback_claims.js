@@ -23,7 +23,7 @@ const CashbackClaims = new Schema({
   username: String,
   aff_id:  {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'affiliate_network',
+    ref: 'cashback_sites',
     required: true
   },
   cb_cashback_id: {

@@ -49,9 +49,11 @@ function uploadCashbacks(req, res, next) {
                     SkrillUsers.findOne({ skrill_id: skrill_id }).then(existUserRow => {
                         let existAmount = 0;
                         let existSiteCom = 0;
+                        let existUserCom = 0;
                         if (existUserRow) {
                             existAmount = existUserRow.total_amount;
                             existSiteCom = existUserRow.site_commission;
+                            existUserCom = existUserRow.user_commission;
                         }
                         let totalAmount = Math.round(row[21] + existAmount);
 
@@ -60,13 +62,15 @@ function uploadCashbacks(req, res, next) {
                         SiteConfig.findOne({ config_module: 'GeneralSitewide' }).then(configRow => {
                             let skrill_cashback = 50;
                             if (configRow) skrill_cashback = configRow.skrill_cashback_value;
-                            let siteCommission = Math.round(row[21] * skrill_cashback) / 100;
-                            let totalComission = Math.round(siteCommission + existSiteCom);
-                            skrillUserData.site_commission = totalComission;
+                            let userCommission = Math.round(row[21] * skrill_cashback) / 100;
+                            let siteCommission = Math.round(row[21] - userCommission );
+                            let totalSiteComission = Math.round(siteCommission + existSiteCom);
+                            let totalComission = Math.round(userCommission + existUserCom);
+                            skrillUserData.site_commission = totalSiteComission;
+                            skrillUserData.user_commission = totalComission;
                             SkrillUsers.update({ skrill_id: skrill_id }, skrillUserData, { upsert: true }, function (err, userDoc) {
                                 if (err) return res.status(400).send({ success: true, msg: err });
                                 const cashbackData = new SkrillCashback();
-                                // cashbackData.user_id = '5c39bc90327e543ff8c14516';
                                 cashbackData.rowid = row[0];
                                 cashbackData.skrillId = skrill_id;
                                 cashbackData.currencySymbol = row[1];
@@ -93,16 +97,15 @@ function uploadCashbacks(req, res, next) {
                                 cashbackData.CPACommission = row[19];
                                 cashbackData.CPACount = row[20];
                                 cashbackData.amount = row[21];
-                                cashbackData.totalCommission = row[21];
-                                cashbackData.siteCommission = siteCommission;
+                                cashbackData.totalCommission = Math.round(row[21]);
+                                cashbackData.siteCommission = Math.round(siteCommission);
+                                cashbackData.userCommission = Math.round(userCommission);
                                 cashbackData.is_new = row[22];
                                 cashbackData.creditDate = Date.now();
                                 cashbackData.cashback = skrill_cashback;
                                 cashbackData.actionAdd = 1;
                                 cashbackData.save((err, doc) => {
                                     let insertedId = doc._id;
-
-
                                     User.findOne({ moneyBookerId: skrill_id }).then(userRow => {
                                         if (userRow) {
                                             const activityData = new ActivityStatement();
@@ -177,15 +180,19 @@ function updateSkrillUser(req, res, next) {
 
         let updateUserData = {};
         updateUserData.user_id = body.user_id;
-        let updateSkrillData = {};
-        updateSkrillData.user_id = body.user_id;
+        let updateData = {};
+        updateData.user_id = body.user_id;
+        updateData.moneyBookerBonus = 10;
+        updateData.moneyBookerIdAdded = Date.now();
+        updateData.moneyBookerId = body.skrill_id;
+
         SkrillUsers.findOneAndUpdate({ skrill_id: body.skrill_id }, { $set: updateUserData })
             .then(() => {
-                return res.status(201).send({ success: true, msg: 'User assigned successfully!' });
-                // SkrillCashback.update({ skrillId: body.skrill_id }, updateSkrillData, { multi: true  }, function (err) {
-                //     if(err)return res.status(400).send({ success: false, msg: 'Server error' });
-                //     return res.status(201).send({ success: true, msg: 'User assigned successfully!' });
-                // });
+              
+                 User.findByIdAndUpdate({ _id: body.user_id }, { $set: updateData }).then(()=>{
+                    return res.status(201).send({ success: true, msg: 'User assigned successfully!' });
+                 })
+                 
             }).catch(() => {
                 return res.status(400).send({ success: false, msg: 'Server error' });
             });
@@ -235,6 +242,9 @@ function getSkrillDetails(req, res, next) {
                                                                 .then(paidSum => {
                                                                     SkrillCashback.aggregate([{ $match: { skrillId: req.query.skrill_user_id, paymentStatus: 1 } }, { $group: { _id: null, sum: { $sum: "$siteCommission" } } }])
                                                                         .then(paidComm => {
+
+                                                                            //var paid_comm = Math.round(totalSum - paidSum);
+                                                                            var paid_comm = 0;
                                                                             return res.status(200).send({
                                                                                 success: true,
                                                                                 userDetails: userDetails,
@@ -1232,9 +1242,11 @@ function uploadEcopayCashbacks(req, res, next) {
                     EcopayUsers.findOne({ ecopayzId: ecopayzId }).then(existUserRow => {
                         let existAmount = 0;
                         let existSiteCom = 0;
+                        let existUserCom = 0;
                         if (existUserRow) {
                             existAmount = existUserRow.total_amount;
                             existSiteCom = existUserRow.site_commission;
+                            existUserCom = existUserRow.user_commission;
                         }
                         let totalAmount = Math.round(row[6] + existAmount);
 
@@ -1243,9 +1255,16 @@ function uploadEcopayCashbacks(req, res, next) {
                         SiteConfig.findOne({ config_module: 'GeneralSitewide' }).then(configRow => {
                             let ecopayz_cashback = 50;
                             if (configRow) ecopayz_cashback = configRow.ecopayz_cashback_value;
-                            let siteCommission = Math.round(row[6] * ecopayz_cashback) / 100;
-                            let totalComission = Math.round(siteCommission + existSiteCom);
-                            skrillUserData.site_commission = totalComission;
+                            // let siteCommission = Math.round(row[6] * ecopayz_cashback) / 100;
+                            // let totalComission = Math.round(siteCommission + existSiteCom);
+                            // skrillUserData.site_commission = totalComission;
+
+                            let userCommission = Math.round(row[6] * ecopayz_cashback) / 100;
+                            let siteCommission = Math.round(row[6] - userCommission );
+                            let totalSiteComission = Math.round(siteCommission + existSiteCom);
+                            let totalComission = Math.round(userCommission + existUserCom);
+                            skrillUserData.site_commission = totalSiteComission;
+                            skrillUserData.user_commission = totalComission;
                             EcopayUsers.update({ ecopayzId: ecopayzId }, skrillUserData, { upsert: true }, function (err, userDoc) {
                                 if (err) return res.status(400).send({ success: true, msg: err });
                                 const cashbackData = new EcopayCashback();
@@ -1261,9 +1280,9 @@ function uploadEcopayCashbacks(req, res, next) {
                                 cashbackData.creditDate = Date.now();
                                 cashbackData.cashback = ecopayz_cashback;
                                 cashbackData.siteCommission = siteCommission;
+                                cashbackData.userCommission = userCommission;
                                 cashbackData.paymentStatus = 0;
                                 cashbackData.save((err, doc) => {
-                               
                                     let insertedId = doc._id;
                                     const activityData = new ActivityStatement();
                                     activityData.activity_userid = ecopayzId;
@@ -1274,8 +1293,6 @@ function uploadEcopayCashbacks(req, res, next) {
                                     activityData.activity_amount = row[21];
                                     activityData.activity_added = Date.now();
                                     activityData.save();
-
-
                                 });
                             });
                         });
