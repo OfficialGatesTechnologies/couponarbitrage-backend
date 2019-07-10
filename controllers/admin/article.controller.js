@@ -27,7 +27,6 @@ function createArticle(req, res) {
                 newArticle.imageFile = newFileName;
             }
             newArticle.title = title;
-           
             newArticle.title_alias = convertToSlug(title_alias);
             newArticle.category = category;       
             newArticle.sub_title = sub_title;

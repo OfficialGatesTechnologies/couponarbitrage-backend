@@ -1,16 +1,21 @@
 const CashbackClaims = require('../models/cashback_claims');
 const CashbackCredits = require('../models/Cashback_credits');
 const SkrillCashback = require('../models/Skrill_cashback');
+const SkrillUsers = require('../models/Skrill_users');
 const SbobetUser = require('../models/Sbobet_user');
 const SbobetPaid = require('../models/Sbobet_paid');
 const NetellerUser = require('../models/Neteller_user');
+const NetellerPaid = require('../models/Neteller_paid');
 const AsianconnectUser = require('../models/Asianconnect_user');
+const AsianconnectPaid = require('../models/Asianconnect_paid');
 const EcopayCashback = require('../models/Ecopayz_cashback');
 const EcopayUsers = require('../models/Ecopayz_users');
- 
- 
-const { getToken } = require('../utils/api.helpers');
-
+const CashbackTransaction = require('../models/Cashback_transactions');
+const TurnoverTransaction = require('../models/Turnover_transactions');
+const ActivityStatement = require('../models/Activity_statement');
+const EmailTemplates = require('../models/Email_template');
+const { getToken, sendCustomMail } = require('../utils/api.helpers');
+const config = require('../config/config');
 
 function getCashbackCliams(req, res) {
 
@@ -55,15 +60,18 @@ function getCashbackCliams(req, res) {
                                                     .then(results => {
                                                         CashbackClaims.countDocuments(query)
                                                             .then(totalCounts => {
-                                                                return res.status(200).send({
-                                                                    success: true,
-                                                                    results: results,
-                                                                    totalCount: totalCounts,
-                                                                    totalUnconfirmed: totalUnconfirmed,
-                                                                    totalConfirmed: totalConfirmed,
-                                                                    totalPayable: totalPayable,
-                                                                    totalPaid: totalPaid,
-                                                                    totalCancelled: totalCancelled
+                                                                CashbackTransaction.find({ user_id: req.user._id, status: 1, deleted: 0, cb_type: 3 }).then(checkPayout => {
+                                                                    return res.status(200).send({
+                                                                        success: true,
+                                                                        results: results,
+                                                                        totalCount: totalCounts,
+                                                                        totalUnconfirmed: totalUnconfirmed,
+                                                                        totalConfirmed: totalConfirmed,
+                                                                        totalPayable: totalPayable,
+                                                                        totalPaid: totalPaid,
+                                                                        totalCancelled: totalCancelled,
+                                                                        checkPayout: checkPayout
+                                                                    });
                                                                 });
                                                             });
                                                     })
@@ -72,8 +80,6 @@ function getCashbackCliams(req, res) {
                             });
                     });
             });
-
-
     } else {
         return res.status(403).send({ success: false, msg: 'Unauthorised' });
     }
@@ -101,14 +107,17 @@ function getRevenueCashbackCliams(req, res) {
                                             .then(results => {
                                                 CashbackClaims.countDocuments(query)
                                                     .then(totalCounts => {
-                                                        return res.status(200).send({
-                                                            success: true,
-                                                            results: results,
-                                                            totalCount: totalCounts,
-                                                            totalUnconfirmed: totalUnconfirmed,
-                                                            totalPaid: totalPaid,
-                                                            unconfirmedList: unconfirmedList,
-                                                            paidList: paidList
+                                                        CashbackTransaction.find({ user_id: req.user._id, status: 1, deleted: 0, cb_type: 2 }).then(checkPayout => {
+                                                            return res.status(200).send({
+                                                                success: true,
+                                                                results: results,
+                                                                totalCount: totalCounts,
+                                                                totalUnconfirmed: totalUnconfirmed,
+                                                                totalPaid: totalPaid,
+                                                                unconfirmedList: unconfirmedList,
+                                                                paidList: paidList,
+                                                                checkPayout: checkPayout
+                                                            });
                                                         });
                                                     });
                                             });
@@ -138,29 +147,383 @@ function getSkrillCashbacks(req, res, next) {
         } else {
             sortQ = {};
         }
+        if (req.user.moneyBookerId == '0' || req.user.moneyBookerId == '') {
+            return res.status(200).send({ success: false, totalComm: 0, totalSum: 0, 'results': [], totalCount: 0, isIdUpdated: false });
+        }
         SkrillCashback.find(query).populate('user_id').skip(skippage).limit(pageLimit).sort(sortQ)
             .then(results => {
-                if (results.length === 0) return res.status(200).send({ success: false, totalComm: 0, totalSum: 0, 'results': [], totalCount: 0, });
+                if (results.length === 0) return res.status(200).send({ success: false, totalComm: 0, totalSum: 0, 'results': [], totalCount: 0, isIdUpdated: true });
                 SkrillCashback.countDocuments(query)
                     .then(totalCounts => {
                         SkrillCashback.aggregate([{ $match: { paymentStatus: 0, skrillId: req.user.moneyBookerId, } }, { $group: { _id: null, sum: { $sum: "$userCommission" } } }])
                             .then(pendingAmount => {
                                 SkrillCashback.aggregate([{ $match: { paymentStatus: 1, skrillId: req.user.moneyBookerId, } }, { $group: { _id: null, sum: { $sum: "$userCommission" } } }])
                                     .then(paidAmount => {
-                                        return res.status(200).send({
-                                            success: true,
-                                            pendingAmount: pendingAmount,
-                                            paidAmount: paidAmount,
-                                            results: results,
-                                            totalCount: totalCounts
-                                        });
+                                        TurnoverTransaction.find({ user_id: req.user._id, status: 1, tb_type: req.query.tb_type, deleted: 0 })
+                                            .then(checkPayout => {
+                                                SkrillUsers.find({ user_id: req.user._id, make_payout: 1 })
+                                                    .then(makePayout => {
+                                                        return res.status(200).send({
+                                                            success: true,
+                                                            pendingAmount: pendingAmount,
+                                                            paidAmount: paidAmount,
+                                                            results: results,
+                                                            totalCount: totalCounts,
+                                                            checkPayout: checkPayout,
+                                                            makePayout: makePayout,
+                                                            isIdUpdated: true
+                                                        });
+                                                    });
+                                            });
                                     });
                             });
                     });
-            })
-            .catch(() => {
+            }).catch(() => {
                 return res.status(400).send({ success: false, msg: 'Server error' });
             });
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
+
+function getSBOBetCashbacks(req, res, next) {
+
+    const token = getToken(req.headers);
+    if (token) {
+        let pageLimit = parseInt(req.query.pageLimit);
+        let skippage = pageLimit * (req.query.page - 1);
+        let query = { user_id: req.user._id };
+        let sortQ = {};
+        if (req.query.searchKey && req.query.searchBy) {
+            query[req.query.searchBy] = req.query.searchKey;
+        }
+        if (req.query.sortOrder && req.query.sortKey) {
+            let sortOrder = (req.query.sortOrder == 'asc') ? 1 : -1;
+            sortQ[req.query.sortKey] = sortOrder;
+        } else {
+            sortQ = {};
+        }
+        SbobetUser.findOne({ user_id: req.user._id })
+            .then(userBalance => {
+                if (!userBalance) return res.status(200).send({ success: false, userBalance: 0, 'results': [], totalCount: 0, });
+                SbobetPaid.find({ sbobetId: userBalance.sbobetId }).populate('user_id').skip(skippage).limit(pageLimit).sort(sortQ)
+                    .then(results => {
+                        SbobetPaid.countDocuments({ sbobetId: userBalance.sbobetId })
+                            .then(totalCounts => {
+                                TurnoverTransaction.find({ user_id: req.user._id, status: 1, tb_type: req.query.tb_type, deleted: 0 })
+                                    .then(checkPayout => {
+                                        return res.status(200).send({
+                                            success: true,
+                                            userBalance: userBalance,
+                                            results: results,
+                                            checkPayout: checkPayout,
+                                            totalCount: totalCounts
+                                        });
+                                    });
+                            }).catch(() => {
+                                return res.status(400).send({ success: false, msg: 'Server error' });
+                            });
+                    }).catch(() => {
+                        return res.status(400).send({ success: false, msg: 'Server error' });
+                    });
+            }).catch(() => {
+                return res.status(400).send({ success: false, msg: 'Server error' });
+            });
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
+function getNetellerCashbacks(req, res, next) {
+
+    const token = getToken(req.headers);
+    if (token) {
+        let pageLimit = parseInt(req.query.pageLimit);
+        let skippage = pageLimit * (req.query.page - 1);
+        let query = { user_id: req.user._id };
+        let sortQ = {};
+        if (req.query.searchKey && req.query.searchBy) {
+            query[req.query.searchBy] = req.query.searchKey;
+        }
+        if (req.query.sortOrder && req.query.sortKey) {
+            let sortOrder = (req.query.sortOrder == 'asc') ? 1 : -1;
+            sortQ[req.query.sortKey] = sortOrder;
+        } else {
+            sortQ = {};
+        }
+        NetellerUser.findOne({ user_id: req.user._id })
+            .then(userBalance => {
+                if (!userBalance) return res.status(200).send({ success: false, userBalance: 0, 'results': [], totalCount: 0, });
+                NetellerPaid.find({ netellerId: userBalance.netellerId }).populate('user_id').skip(skippage).limit(pageLimit).sort(sortQ)
+                    .then(results => {
+                        NetellerPaid.countDocuments({ netellerId: userBalance.netellerId })
+                            .then(totalCounts => {
+                                TurnoverTransaction.find({ user_id: req.user._id, status: 1, tb_type: req.query.tb_type, deleted: 0 })
+                                    .then(checkPayout => {
+                                        return res.status(200).send({
+                                            success: true,
+                                            userBalance: userBalance,
+                                            results: results,
+                                            totalCount: totalCounts,
+                                            checkPayout: checkPayout
+                                        });
+                                    });
+                            }).catch(() => {
+                                return res.status(400).send({ success: false, msg: 'Server error' });
+                            });
+                    }).catch(() => {
+                        return res.status(400).send({ success: false, msg: 'Server error' });
+                    });
+            }).catch(() => {
+                return res.status(400).send({ success: false, msg: 'Server error' });
+            });
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
+function getAssianConnectCashbacks(req, res, next) {
+
+    const token = getToken(req.headers);
+    if (token) {
+        let pageLimit = parseInt(req.query.pageLimit);
+        let skippage = pageLimit * (req.query.page - 1);
+        let query = { user_id: req.user._id };
+        let sortQ = {};
+        if (req.query.searchKey && req.query.searchBy) {
+            query[req.query.searchBy] = req.query.searchKey;
+        }
+        if (req.query.sortOrder && req.query.sortKey) {
+            let sortOrder = (req.query.sortOrder == 'asc') ? 1 : -1;
+            sortQ[req.query.sortKey] = sortOrder;
+        } else {
+            sortQ = {};
+        }
+        AsianconnectUser.findOne({ user_id: req.user._id })
+            .then(userBalance => {
+                if (!userBalance) return res.status(200).send({ success: false, userBalance: 0, 'results': [], totalCount: 0, });
+                AsianconnectPaid.find({ asianconnectId: userBalance.asianconnectId }).populate('user_id').skip(skippage).limit(pageLimit).sort(sortQ)
+                    .then(results => {
+                        AsianconnectPaid.countDocuments({ asianconnectId: userBalance.asianconnectId })
+                            .then(totalCounts => {
+                                TurnoverTransaction.find({ user_id: req.user._id, status: 1, tb_type: req.query.tb_type, deleted: 0 })
+                                    .then(checkPayout => {
+                                        return res.status(200).send({
+                                            success: true,
+                                            userBalance: userBalance,
+                                            results: results,
+                                            totalCount: totalCounts,
+                                            checkPayout: checkPayout
+                                        });
+                                    });
+                            }).catch(() => {
+                                return res.status(400).send({ success: false, msg: 'Server error 1' });
+                            });
+                    }).catch(() => {
+                        return res.status(400).send({ success: false, msg: 'Server error 2' });
+                    });
+            }).catch((err) => {
+                console.log(err);
+                return res.status(400).send({ success: false, msg: err });
+            });
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
+function getEcopayzCashbacks(req, res, next) {
+
+    const token = getToken(req.headers);
+    if (token) {
+        let pageLimit = parseInt(req.query.pageLimit);
+        let skippage = pageLimit * (req.query.page - 1);
+        let query = {};
+        let sortQ = {};
+        if (req.query.searchKey && req.query.searchBy) {
+            query[req.query.searchBy] = req.query.searchKey;
+        }
+        if (req.query.sortOrder && req.query.sortKey) {
+            let sortOrder = (req.query.sortOrder == 'asc') ? 1 : -1;
+            sortQ[req.query.sortKey] = sortOrder;
+        } else {
+            sortQ = {};
+        }
+        EcopayUsers.findOne({ user_id: req.user._id })
+            .then(userBalance => {
+                if (!userBalance) return res.status(200).send({ success: false, totalComm: 0, userBalance:0,totalSum: 0, 'results': [], totalCount: 0, });
+                EcopayCashback.find({ ecopayzId: userBalance.ecopayzId }).populate('user_id').skip(skippage).limit(pageLimit).sort(sortQ)
+                    .then(results => {
+                        EcopayCashback.countDocuments({ ecopayzId: userBalance.ecopayzId })
+                            .then(totalCounts => {
+                                EcopayCashback.aggregate([{ $match: { paymentStatus: 0, ecopayzId: userBalance.ecopayzId, } }, { $group: { _id: null, sum: { $sum: "$userCommission" } } }])
+                                    .then(pendingAmount => {
+                                        EcopayCashback.aggregate([{ $match: { paymentStatus: 1, ecopayzId: userBalance.ecopayzId, } }, { $group: { _id: null, sum: { $sum: "$userCommission" } } }])
+                                            .then(paidAmount => {
+                                                TurnoverTransaction.find({ user_id: req.user._id, status: 1, tb_type: req.query.tb_type, deleted: 0 })
+                                                    .then(checkPayout => {
+                                                        return res.status(200).send({
+                                                            success: true,
+                                                            userBalance:userBalance,
+                                                            pendingAmount: pendingAmount,
+                                                            paidAmount: paidAmount,
+                                                            results: results,
+                                                            totalCount: totalCounts,
+                                                            checkPayout: checkPayout
+                                                        });
+                                                    });
+                                            });
+                                    });
+                            });
+                    }).catch(() => {
+                        return res.status(400).send({ success: false, msg: 'Server error' });
+                    });
+            });
+
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
+function requestPayout(req, res) {
+    const token = getToken(req.headers);
+    if (token) {
+        const { body } = req;
+        const { cb_type, value } = body;
+        let activityname = '';
+        let activitytype = '';
+        if (cb_type == 2) {
+            activityname = "Revenue Share Cashback Payout Request";
+            activitytype = "RevenuePayout";
+        } else if (cb_type == 3) {
+            activityname = "Cashback Payout Request";
+            activitytype = "CashbackPayout";
+        } else if (cb_type == 4) {
+            activityname = "Affiliate Payout Request";
+            activitytype = "AffiliatePayout";
+        }
+        CashbackTransaction.find({ user_id: req.user._id, status: 1, deleted: 0, cb_type: cb_type }).then(checkPayout => {
+
+            if (checkPayout.length > 0) return res.status(401).send({ success: false, msg: 'Sorry! You cannot make payout request.' });
+            const newPayout = new CashbackTransaction();
+            newPayout.user_id = req.user._id;
+            newPayout.cb_type = cb_type;
+            newPayout.value = value;
+            newPayout.status = 1;
+            newPayout.save((err, doc) => {
+                // console.log('err',err);
+                if (err) {
+                    return res.status(401).send({ success: true, msg: 'Server error!' });
+                }
+                // console.log('doc',doc);
+                let insertedId = doc._id;
+                EmailTemplates.findOne({ template_name: 'withdrawal_request' })
+                    .then(emailRow => {
+                        var subject = emailRow.template_subject;
+                        var htmlStr = emailRow.template_content;
+                        var subjectHtml = subject.replace(/{AMOUNT}/g, '£' + value);
+                        var resultHtml = htmlStr.replace(/{USER_NAME}/g, req.user.name);
+                        resultHtml = resultHtml.replace(/{ID}/g, req.user.epiCode);
+                        resultHtml = resultHtml.replace(/{LOGO_PATH}/g, config.logo_path);
+                        resultHtml = resultHtml.replace(/{SITE_NAME}/g, config.site_name);
+                        resultHtml = resultHtml.replace(/{AMOUNT}/g, '£' + value);
+                        var toEmail = req.user.email;
+                        sendCustomMail(toEmail, toEmail, resultHtml, subjectHtml);
+                        const activityData = new ActivityStatement();
+                        activityData.activity_userid = req.user._id;
+                        activityData.activity_tableid = insertedId;
+                        activityData.activity_name = activityname;
+                        activityData.activity_type = activitytype;
+                        activityData.activity_status = 'Pending';
+                        activityData.activity_amount = value;
+                        activityData.activity_added = Date.now();
+                        activityData.save();
+                        return res.status(201).send({ success: true, msg: 'Your payout request has been sent !' });
+                    });
+
+            });
+        });
+
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
+
+function requestTurnoverPayout(req, res) {
+    const token = getToken(req.headers);
+    if (token) {
+        const { body } = req;
+        const { tb_type, value, scheme, cashback_user_id } = body;
+        let activityname = '';
+        let activitytype = 'TurnoverPayout';
+        if (scheme == 1) {
+            activityname = "Turnover Cashback Skrill Payout Request";
+        } else if (scheme == 2) {
+            activityname = "Turnover Cashback Neteller Payout Request";
+        } else if (scheme == 3) {
+            activityname = "Turnover Cashback Ecopayz Payout  Request";
+        } else if (scheme == 4) {
+            activityname = "Turnover Cashback SBOBet Payout  Request";
+        } else if (scheme == 5) {
+            activityname = "Turnover Cashback AsianConnect88 Payout Request";
+        }
+        TurnoverTransaction.find({ user_id: req.user._id, status: 1, deleted: 0, tb_type: tb_type }).then(checkPayout => {
+
+            if (checkPayout.length > 0) return res.status(401).send({ success: false, msg: 'Sorry! You cannot make payout request.' });
+            const newPayout = new TurnoverTransaction();
+            newPayout.cashback_user_id = cashback_user_id;
+            newPayout.user_id = req.user._id;
+            newPayout.tb_type = tb_type;
+            newPayout.scheme = scheme;
+            newPayout.value = value;
+            newPayout.status = 1;
+            newPayout.save((err, doc) => {
+                // console.log('err',err);
+                if (err) {
+                    return res.status(401).send({ success: true, msg: 'Server error!' });
+                }
+                // console.log('doc',doc);
+                let insertedId = doc._id;
+                EmailTemplates.findOne({ template_name: 'withdrawal_request' })
+                    .then(emailRow => {
+                        var subject = emailRow.template_subject;
+                        var htmlStr = emailRow.template_content;
+                        var subjectHtml = subject.replace(/{AMOUNT}/g, '£' + value);
+                        var resultHtml = htmlStr.replace(/{USER_NAME}/g, req.user.name);
+                        resultHtml = resultHtml.replace(/{ID}/g, req.user.epiCode);
+                        resultHtml = resultHtml.replace(/{LOGO_PATH}/g, config.logo_path);
+                        resultHtml = resultHtml.replace(/{SITE_NAME}/g, config.site_name);
+                        resultHtml = resultHtml.replace(/{AMOUNT}/g, '£' + value);
+                        var toEmail = req.user.email;
+                        sendCustomMail(toEmail, toEmail, resultHtml, subjectHtml);
+                        const activityData = new ActivityStatement();
+                        activityData.activity_userid = req.user._id;
+                        activityData.activity_tableid = insertedId;
+                        activityData.activity_name = activityname;
+                        activityData.activity_type = activitytype;
+                        activityData.activity_status = 'Pending';
+                        activityData.activity_amount = value;
+                        activityData.activity_added = Date.now();
+                        activityData.save();
+                        if (scheme == 1) {
+                            let updateData = {};
+                            updateData.make_payout = 0;
+                            SkrillUsers.findOneAndUpdate({ skrill_id: cashback_user_id }, { $set: updateData }).then(() => {
+                                return res.status(201).send({ success: true, msg: 'Your payout request has been sent !' });
+                            }).catch(() => {
+                                return res.status(400).send({ success: false, msg: 'Server error' });
+                            });
+                        } else if (scheme == 3) {
+                            let updateData = {};
+                            updateData.make_payout = 0;
+                            NetellerUser.findOneAndUpdate({ netellerId: cashback_user_id }, { $set: updateData }).then(() => {
+
+                                return res.status(201).send({ success: true, msg: 'Your payout request has been sent !' });
+                            }).catch(() => {
+                                return res.status(400).send({ success: false, msg: 'Server error f' });
+                            });
+                        }
+                        return res.status(201).send({ success: true, msg: 'Your payout request has been sent !' });
+                    });
+
+            });
+        });
+
     } else {
         return res.status(403).send({ success: false, msg: 'Unauthorised' });
     }
@@ -234,6 +597,12 @@ module.exports = {
     getCashbackCliams,
     getRevenueCashbackCliams,
     getDashboardStats,
-    getSkrillCashbacks
+    getSkrillCashbacks,
+    getSBOBetCashbacks,
+    getNetellerCashbacks,
+    getAssianConnectCashbacks,
+    getEcopayzCashbacks,
+    requestPayout,
+    requestTurnoverPayout
 }
 

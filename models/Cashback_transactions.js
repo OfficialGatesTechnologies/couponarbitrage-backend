@@ -13,7 +13,7 @@ const CashbackTransactions = new Schema({
   case_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'cashback_cliams',
-    required: true
+    
   },
   cb_type: {
     type: Number,

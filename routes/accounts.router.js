@@ -6,7 +6,13 @@ const {
     getDashboardStats,
     getCashbackCliams,
     getRevenueCashbackCliams,
-    getSkrillCashbacks
+    getSkrillCashbacks,
+    getSBOBetCashbacks,
+    getNetellerCashbacks,
+    getAssianConnectCashbacks,
+    getEcopayzCashbacks,
+    requestPayout,
+    requestTurnoverPayout
 } = require('../controllers/accounts.controller');
 
 
@@ -23,7 +29,22 @@ router.get('/rcb-earnings', passport.authenticate('jwt', {
 router.get('/skrill-earnings', passport.authenticate('jwt', {
     session: false
 }), getSkrillCashbacks);
-
-
-
+router.get('/sbobet-earnings', passport.authenticate('jwt', {
+    session: false
+}), getSBOBetCashbacks);
+router.get('/neteller-earnings', passport.authenticate('jwt', {
+    session: false
+}), getNetellerCashbacks);
+router.get('/assianconnect-earnings', passport.authenticate('jwt', {
+    session: false
+}), getAssianConnectCashbacks);
+router.get('/ecopayz-earnings', passport.authenticate('jwt', {
+    session: false
+}), getEcopayzCashbacks);
+router.post('/payout-request', passport.authenticate('jwt', {
+    session: false
+}), requestPayout);
+router.post('/turnover-payout-request', passport.authenticate('jwt', {
+    session: false
+}), requestTurnoverPayout);
 module.exports = router;

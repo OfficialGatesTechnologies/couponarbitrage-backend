@@ -65,16 +65,16 @@ function updatePayouts(req, res, next) {
                                 resultHtml = resultHtml.replace(/{PAYMENT_TYPE}/g, payment_type);
                                 resultHtml = resultHtml.replace(/{PAYMENT_EMAIL}/g, payment_email);
                                 var toEmail = userRow.email;
-                                if (payoutRow.cb_type == 2) {
+                                if (payoutRow.cb_type == 3) {
                                     let updateTxnData = {};
                                     updateTxnData.status = 'S';
                                     updateTxnData.date_paid = body.trans_date;
-                                    CashbackClaims.update({ status: 'A', raf_case_id: 0, cb_type: payoutRow.cb_type, user_id: payoutRow.user_id }, updateTxnData, { upsert: false }, function (err) {
+                                    CashbackClaims.update({ status: 'A', raf_case_id: 0, cb_type: payoutRow.cb_type, user_id: payoutRow.user_id }, updateTxnData, { multi: true }, function (err) {
                                         if (err) return res.status(400).send({ success: true, msg: err });
                                         sendCustomMail(toEmail, toEmail, resultHtml, subjectHtml);
                                         return res.status(201).send({ success: true, msg: 'Payout updated successfully' });
                                     });
-                                } else if (payoutRow.cb_type == 3) {
+                                } else if (payoutRow.cb_type == 2) {
                                     let updateTxnData = {};
                                     updateTxnData.revenueCreditStatus = 2;
                                     updateTxnData.revenueCreditPaid = body.trans_date;
@@ -93,7 +93,7 @@ function updatePayouts(req, res, next) {
                                     let updateTxnData = {};
                                     updateTxnData.status = 'S';
                                     updateTxnData.date_paid = body.trans_date;
-                                    CashbackClaims.update({ status: 'A', raf_case_id: { $ne: 0 }, cb_type: payoutRow.cb_type, user_id: payoutRow.user_id }, updateTxnData, { upsert: false }, function (err) {
+                                    CashbackClaims.update({ status: 'A', raf_case_id: { $ne: 0 }, cb_type: payoutRow.cb_type, user_id: payoutRow.user_id }, updateTxnData, { multi: true }, function (err) {
                                         if (err) return res.status(400).send({ success: true, msg: err });
                                         let updateTxnData = {};
                                         updateTxnData.revenueCreditStatus = 2;
@@ -195,7 +195,7 @@ function getCashbackPauouts(req, res) {
         let pageLimit = parseInt(req.query.pageLimit);
 
         let skippage = pageLimit * (req.query.page - 1);
-        let query = { deleted: 0, cb_type: parseInt(req.query.cb_type) };//
+        let query = { deleted: 0, cb_type: parseInt(req.query.cb_type),status: { $ne: 0 } }; 
         let sortQ = {};
         if (req.query.searchKey && req.query.searchBy) {
             query[req.query.searchBy] = new RegExp(req.query.searchKey, 'i');
@@ -206,7 +206,7 @@ function getCashbackPauouts(req, res) {
         if (req.query.filterByStatus && req.query.filterByStatus != 'all') {
             query['status'] = req.query.filterByStatus;
         }
-        sortQ = { status: -1 };
+        sortQ = { status: 1 };
         CashbackTransaction.find(query)
             .populate('user_id')
             .skip(skippage).limit(pageLimit).sort(sortQ)
@@ -214,11 +214,9 @@ function getCashbackPauouts(req, res) {
                 if (results.length === 0) return res.status(200).send({ success: false, 'results': [], totalCount: 0, });
                 CashbackTransaction.countDocuments(query)
                     .then(totalCounts => {
-
                         return res.status(200).send({ success: true, results: results, totalCount: totalCounts });
                     });
-            })
-            .catch((err) => res.status(400).send({ success: false, msg: err }));
+            }).catch((err) => res.status(400).send({ success: false, msg: err }));
     } else {
         return res.status(403).send({ success: false, msg: 'Unauthorised' });
     }
@@ -367,8 +365,8 @@ function updateTurnoverPayouts(req, res, next) {
                                     updateTxnData.paymentStatus = 1;
                                     let updateUserData = {};
                                     updateUserData.moneyBookerAwardto = 1;
-                                    SkrillCashback.update({ paymentStatus: 0, skrillId: payoutRow.cashback_user_id }, updateTxnData, { upsert: false }, function (err) {
-                                        User.update({ moneyBookerAwardto: 0, _id: userRow.user_id }, updateUserData, { upsert: false }, function (err) {
+                                    SkrillCashback.update({ paymentStatus: 0, skrillId: payoutRow.cashback_user_id }, updateTxnData, { multi: true }, function (err) {
+                                        User.update({ moneyBookerAwardto: 0, moneyBookerId: payoutRow.cashback_user_id }, updateUserData, { upsert: false }, function (err) {
                                             sendCustomMail(toEmail, toEmail, resultHtml, subjectHtml);
                                             return res.status(201).send({ success: true, msg: 'Payout updated successfully' });
                                         });
@@ -376,7 +374,7 @@ function updateTurnoverPayouts(req, res, next) {
                                 } else if (payoutRow.scheme == 5) {
                                     let updateTxnData = {};
                                     updateTxnData.paymentStatus = 1;
-                                    EcopayCashback.update({ paymentStatus: 0, ecopayzId: payoutRow.cashback_user_id }, updateTxnData, { upsert: false }, function (err) {
+                                    EcopayCashback.update({ paymentStatus: 0, ecopayzId: payoutRow.cashback_user_id }, updateTxnData, { multi: true }, function (err) {
                                         sendCustomMail(toEmail, toEmail, resultHtml, subjectHtml);
                                         return res.status(201).send({ success: true, msg: 'Payout updated successfully' });
                                     });
@@ -468,7 +466,6 @@ function updateTurnoverPayouts(req, res, next) {
                                 return res.json({ success: false, msg: 'server error' })
                             })
                     });
-
                 }).catch((err) => {
                     return res.status(500).send({ success: false, msg: err })
                 })

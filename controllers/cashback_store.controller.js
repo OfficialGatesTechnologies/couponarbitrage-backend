@@ -47,7 +47,7 @@ function getCashbackStores(req, res) {
         skippage = Math.floor(Math.random() * 11)
     }
     if (req.query.offferFor && req.query.offferFor === 'nav') {
-     
+
         skippage = Math.floor(Math.random() * 3)
     }
     if (req.query.offferFor && req.query.offferFor === 'top') {
@@ -104,7 +104,7 @@ function getStoreRowByUrl(req, res) {
     cashbackStores.populate('offers')
     cashbackStores.populate({ path: 'voucherCodes', match: { voucher_disabled: 0, voucher_deleted: 0 } })
     cashbackStores.populate({ path: 'cat_id', populate: { path: 'cat_parent' } })
-    
+
     if ((req.query.ref).match(/^[0-9a-fA-F]{24}$/)) {
         cashbackStores.populate({ path: 'isExistClaim', match: { user_id: req.query.ref } })
         cashbackStores.populate({ path: 'isExistSiteClaim', match: { user_id: req.query.ref } })
@@ -112,10 +112,9 @@ function getStoreRowByUrl(req, res) {
     cashbackStores.then(catRow => {
         if (catRow.length === 0) return res.status(200).send({ success: false });
         return res.status(200).send({ success: true, 'results': catRow });
-    })
-        .catch((err) => {
-            return res.status(400).send({ success: false, msg: err });
-        });
+    }).catch((err) => {
+        return res.status(400).send({ success: false, msg: err });
+    });
 
 }
 function getOfferRowById(req, res) {
@@ -260,7 +259,7 @@ function postReview(req, res, next) {
     if (token) {
         const { body } = req;
 
-        const { title, comments,rating } = body.popupData;
+        const { title, comments, rating } = body.popupData;
         if (!title) return res.status(400).send({ success: false, message: 'Please enter the title.' });
         else if (!comments) return res.status(400).send({ success: false, msg: 'Please enter your name.' });
 
