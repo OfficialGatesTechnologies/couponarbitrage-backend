@@ -14,6 +14,7 @@ const CashbackTransaction = require('../models/Cashback_transactions');
 const TurnoverTransaction = require('../models/Turnover_transactions');
 const ActivityStatement = require('../models/Activity_statement');
 const EmailTemplates = require('../models/Email_template');
+const User = require('../models/User');
 const { getToken, sendCustomMail } = require('../utils/api.helpers');
 const config = require('../config/config');
 
@@ -130,7 +131,7 @@ function getRevenueCashbackCliams(req, res) {
     }
 }
 
-function getSkrillCashbacks(req, res, next) {
+function getSkrillCashbacks(req, res) {
 
     const token = getToken(req.headers);
     if (token) {
@@ -186,7 +187,7 @@ function getSkrillCashbacks(req, res, next) {
     }
 }
 
-function getSBOBetCashbacks(req, res, next) {
+function getSBOBetCashbacks(req, res) {
 
     const token = getToken(req.headers);
     if (token) {
@@ -233,7 +234,7 @@ function getSBOBetCashbacks(req, res, next) {
         return res.status(403).send({ success: false, msg: 'Unauthorised' });
     }
 }
-function getNetellerCashbacks(req, res, next) {
+function getNetellerCashbacks(req, res) {
 
     const token = getToken(req.headers);
     if (token) {
@@ -280,7 +281,7 @@ function getNetellerCashbacks(req, res, next) {
         return res.status(403).send({ success: false, msg: 'Unauthorised' });
     }
 }
-function getAssianConnectCashbacks(req, res, next) {
+function getAssianConnectCashbacks(req, res) {
 
     const token = getToken(req.headers);
     if (token) {
@@ -328,7 +329,7 @@ function getAssianConnectCashbacks(req, res, next) {
         return res.status(403).send({ success: false, msg: 'Unauthorised' });
     }
 }
-function getEcopayzCashbacks(req, res, next) {
+function getEcopayzCashbacks(req, res) {
 
     const token = getToken(req.headers);
     if (token) {
@@ -347,7 +348,7 @@ function getEcopayzCashbacks(req, res, next) {
         }
         EcopayUsers.findOne({ user_id: req.user._id })
             .then(userBalance => {
-                if (!userBalance) return res.status(200).send({ success: false, totalComm: 0, userBalance:0,totalSum: 0, 'results': [], totalCount: 0, });
+                if (!userBalance) return res.status(200).send({ success: false, totalComm: 0, userBalance: 0, totalSum: 0, 'results': [], totalCount: 0, });
                 EcopayCashback.find({ ecopayzId: userBalance.ecopayzId }).populate('user_id').skip(skippage).limit(pageLimit).sort(sortQ)
                     .then(results => {
                         EcopayCashback.countDocuments({ ecopayzId: userBalance.ecopayzId })
@@ -360,7 +361,7 @@ function getEcopayzCashbacks(req, res, next) {
                                                     .then(checkPayout => {
                                                         return res.status(200).send({
                                                             success: true,
-                                                            userBalance:userBalance,
+                                                            userBalance: userBalance,
                                                             pendingAmount: pendingAmount,
                                                             paidAmount: paidAmount,
                                                             results: results,
@@ -528,7 +529,51 @@ function requestTurnoverPayout(req, res) {
         return res.status(403).send({ success: false, msg: 'Unauthorised' });
     }
 }
-
+function updatePaymentDetails(req, res, next) {
+    const token = getToken(req.headers);
+    if (token) {
+        const { body } = req;
+        const { _id, accountSkrillEmail, accountNetellerEmail
+            , accountPaypalEmail, bankAccountName, bankAccountNumber, bankAccountSortCode } = body.userData;
+        User.findById({
+            _id: _id
+        }).then(user => {
+            if (!user) return res.status(401).send({ success: false, message: 'Invalid account.' });
+            let updateData = {};
+            if (body.type == 1) updateData.accountSkrillEmail = accountSkrillEmail;
+            if (body.type == 2) updateData.accountNetellerEmail = accountNetellerEmail;
+            if (body.type == 3) updateData.accountPaypalEmail = accountPaypalEmail;
+            if (body.type == 4) {
+                updateData.bankAccountName = bankAccountName;
+                updateData.bankAccountNumber = bankAccountNumber;
+                updateData.bankAccountSortCode = bankAccountSortCode;
+            }
+            User.findByIdAndUpdate({ _id: user._id }, { $set: updateData })
+                .then(() => {
+                    EmailTemplates.findOne({ template_name: 'payment_change' })
+                        .then(emailRow => {
+                            var subject = emailRow.template_subject;
+                            var htmlStr = emailRow.template_content;
+                            var subjectHtml = subject;
+                            var resultHtml = htmlStr.replace(/{USER_NAME}/g, req.user.name);
+                            resultHtml = resultHtml.replace(/{LOGO_PATH}/g, config.logo_path);
+                            resultHtml = resultHtml.replace(/{SITE_NAME}/g, config.site_name);
+                            var toEmail = req.user.email;
+                            sendCustomMail(toEmail, toEmail, resultHtml, subjectHtml);
+                            return res.status(201).send({ success: true, msg: 'Payment details updated successfully' });
+                        });
+                }).catch((err) => {
+     
+                    return res.status(500).send({ success: false, msg: 'server error11' })
+                })
+        }).catch(err => {
+            if (err.status === 404) res.status(400).send({ success: false, msg: err.msg })
+            else return next({ status: 500, msg: 'server error' })
+        })
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
 function getDashboardStats(req, res) {
     const token = getToken(req.headers);
     if (token) {
@@ -603,6 +648,7 @@ module.exports = {
     getAssianConnectCashbacks,
     getEcopayzCashbacks,
     requestPayout,
-    requestTurnoverPayout
+    requestTurnoverPayout,
+    updatePaymentDetails
 }
 
