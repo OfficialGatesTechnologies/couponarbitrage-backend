@@ -13,7 +13,9 @@ const {
     getEcopayzCashbacks,
     requestPayout,
     requestTurnoverPayout,
-    updatePaymentDetails
+    updatePaymentDetails,
+    updateUserAccount,
+    getUserActivities
 } = require('../controllers/accounts.controller');
 
 
@@ -51,4 +53,10 @@ router.post('/turnover-payout-request', passport.authenticate('jwt', {
 router.post('/update-payment-details', passport.authenticate('jwt', {
     session: false
 }), updatePaymentDetails);
+router.post('/update-account', passport.authenticate('jwt', {
+    session: false
+}), updateUserAccount);
+router.get('/user-activities', passport.authenticate('jwt', {
+    session: false
+}), getUserActivities);
 module.exports = router;

@@ -97,7 +97,7 @@ const UserSchema = new Schema({
       default: ''
   },
   accountDob: {
-      type: Date,
+      type: String,
       default: ''
   },
   bankAccountName: {

@@ -62,8 +62,6 @@ function createUserAccount(req, res, next) {
                             return res.status(201).send({ success: true, msg: 'Account created successfully!' });
                         });
                     });
-
-
             }).catch((err) => {
                 console.log('err 2 ', err);
                 return res.status(400).send({ success: false, msg: 'Server error 22' });

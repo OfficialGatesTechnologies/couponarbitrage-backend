@@ -15,7 +15,8 @@ const TurnoverTransaction = require('../models/Turnover_transactions');
 const ActivityStatement = require('../models/Activity_statement');
 const EmailTemplates = require('../models/Email_template');
 const User = require('../models/User');
-const { getToken, sendCustomMail } = require('../utils/api.helpers');
+const { getToken, sendCustomMail, genRandomPassword,
+    getCryptedPassword } = require('../utils/api.helpers');
 const config = require('../config/config');
 
 function getCashbackCliams(req, res) {
@@ -562,14 +563,114 @@ function updatePaymentDetails(req, res, next) {
                             sendCustomMail(toEmail, toEmail, resultHtml, subjectHtml);
                             return res.status(201).send({ success: true, msg: 'Payment details updated successfully' });
                         });
-                }).catch((err) => {
-     
+                }).catch(() => {
+
                     return res.status(500).send({ success: false, msg: 'server error11' })
                 })
         }).catch(err => {
             if (err.status === 404) res.status(400).send({ success: false, msg: err.msg })
             else return next({ status: 500, msg: 'server error' })
         })
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
+
+function updateUserAccount(req, res, next) {
+    const token = getToken(req.headers);
+    if (token) {
+
+        const { body } = req;
+
+        const { _id, name, last_name, email, username, upassword, cpassword, accountPhone,
+            accountCountry, accountAddress, accountDob } = body.userData;
+        if (!name) return res.status(401).send({ success: false, message: 'Please enter your name.' });
+        else if (!username) return res.status(401).send({ success: false, message: 'Please enter your username.' });
+        else if (!email) return res.status(401).send({ success: false, message: 'Please enter your email address.' });
+        else if (!accountPhone) return res.status(400).send({ success: false, message: 'Please enter the phone number.' });
+        else if (upassword) {
+            if (!cpassword) return res.status(401).send({ success: false, message: 'Please confirm your password.' });
+        }
+
+        User.findById({
+            _id: _id
+        })
+            .then(user => {
+                if (!user) return res.status(401).send({ success: false, message: 'Invalid account.' });
+                User.find({ email: email, accountDeleted: 0, _id: { $ne: _id } })
+                    .then(existEmail => {
+                        if (existEmail.length > 0) return res.status(400).send({ success: false, msg: 'Email address  already exists.' });
+                        User.find({ username: username, accountDeleted: 0, _id: { $ne: _id } })
+                            .then(exisUsername => {
+                                if (exisUsername.length > 0) return res.status(400).send({ success: false, msg: 'Username already exists.' });
+                                let updateData = {};
+                                updateData.name = name;
+                                updateData.last_name = last_name;
+                                updateData.username = username;
+                                updateData.email = email;
+                                updateData.accountPhone = accountPhone;
+                                updateData.accountAddress = accountAddress;
+                                updateData.accountDob = accountDob;
+                                updateData.accountCountry = accountCountry;
+                                if (upassword) {
+                                    var passwordSalt = genRandomPassword(32);
+                                    var userPassword = getCryptedPassword(upassword, passwordSalt);
+                                    updateData.password = userPassword + ':' + passwordSalt;
+                                }
+
+                                User.findByIdAndUpdate({ _id: user._id }, { $set: updateData })
+                                    .then(() => {
+                                        return res.status(201).send({ success: true, msg: 'Account updated successfully' });
+                                    }).catch((err) => {
+                                        console.log(err)
+                                        return res.status(500).send({ success: false, msg: 'server error11' })
+                                    })
+                            }).catch((err) => {
+                                console.log(err)
+                                return res.status(500).send({ success: false, msg: 'server error44' })
+                            })
+                    }).catch((err) => {
+                        console.log(err)
+                        return res.status(500).send({ success: false, msg: 'server error22' })
+                    })
+            })
+            .catch(err => {
+                if (err.status === 404) res.status(400).send({ success: false, msg: err.msg })
+                else return next({ status: 500, msg: 'server error' })
+            })
+    } else {
+        return res.status(403).send({ success: false, msg: 'Unauthorised' });
+    }
+}
+function getUserActivities(req, res) {
+
+    const token = getToken(req.headers);
+    if (token) {
+        let pageLimit = parseInt(req.query.pageLimit);
+
+        let skippage = pageLimit * (req.query.page - 1);
+        let query = { activity_deleted: 0, activity_disabled: 0 };
+        let sortQ = {};
+        if (req.query.searchKey && req.query.searchBy) {
+            query[req.query.searchBy] = new RegExp(req.query.searchKey, 'i');
+        }
+        if (req.query.sortOrder && req.query.sortKey) {
+            let sortOrder = (req.query.sortOrder == 'asc') ? 1 : -1;
+            sortQ[req.query.sortKey] = sortOrder;
+        } else {
+            sortQ = { activity_added: 1 };
+        }
+
+        ActivityStatement.find(query).skip(skippage).limit(pageLimit).sort(sortQ)
+            .then(results => {
+                if (results.length === 0) return res.status(200).send({ success: false, 'results': [], totalCount: 0, });
+                ActivityStatement.countDocuments(query)
+                    .then(colCounts => {
+                        return res.status(200).send({ success: true, results: results, totalCount: colCounts });
+                    });
+            }).catch(() => {
+                return res.status(400).send({ success: false, msg: 'Server error' });
+            });
     } else {
         return res.status(403).send({ success: false, msg: 'Unauthorised' });
     }
@@ -649,6 +750,8 @@ module.exports = {
     getEcopayzCashbacks,
     requestPayout,
     requestTurnoverPayout,
-    updatePaymentDetails
+    updatePaymentDetails,
+    updateUserAccount,
+    getUserActivities
 }
 
