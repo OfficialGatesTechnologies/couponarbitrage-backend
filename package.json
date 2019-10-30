@@ -34,7 +34,7 @@
     "mocha": "^5.2.0",
     "moment": "^2.22.2",
     "mongodb": "~3.0.8",
-    "mongoose": "^5.4.19",
+    "mongoose": "^5.7.5",
     "morgan": "^1.9.1",
     "node-cron": "^1.2.1",
     "nodemailer": "^4.6.8",
