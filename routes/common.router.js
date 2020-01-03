@@ -9,7 +9,9 @@ const {
     getBanners,
     getStaticText,
     turnoverReg,
-    getFaqs
+    getFaqs,
+    getArticleRowByURL,
+    createComment
 } = require('../controllers/common.controller');
 
 router.get('/menus', getMenus);
@@ -19,4 +21,6 @@ router.get('/banner-list', getBanners);
 router.get('/static-text', getStaticText);
 router.post('/turnover-registration', turnoverReg);
 router.get('/faqs', getFaqs);
+router.get('/article-row', getArticleRowByURL);
+router.post('/post-comment', createComment);
 module.exports = router;

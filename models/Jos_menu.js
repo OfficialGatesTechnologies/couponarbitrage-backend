@@ -86,5 +86,10 @@ JosMenu.virtual('submenus', {
   localField: '_id',  
   foreignField: 'parent',  
 });
-
+JosMenu.virtual('articleList', {
+  ref: 'articles',
+  localField: '_id',
+  foreignField: 'category',
+   
+});
 module.exports = mongoose.model('jos_menu', JosMenu, 'jos_menu');

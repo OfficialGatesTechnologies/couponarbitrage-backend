@@ -15,10 +15,15 @@ const TurnoverTransaction = require('../models/Turnover_transactions');
 const ActivityStatement = require('../models/Activity_statement');
 const EmailTemplates = require('../models/Email_template');
 const User = require('../models/User');
-const { getToken, sendCustomMail, genRandomPassword,
-    getCryptedPassword } = require('../utils/api.helpers');
+const {
+    getToken,
+    sendCustomMail,
+    genRandomPassword,
+    getCryptedPassword
+} = require('../utils/api.helpers');
 const config = require('../config/config');
-
+const moment = require('moment');
+var async = require('async');
 function getCashbackCliams(req, res) {
 
     const token = getToken(req.headers);
@@ -739,6 +744,40 @@ function getDashboardStats(req, res) {
     }
 
 }
+function getAffilatesStats(req, res) {
+    var currentDate = moment();
+    var month = currentDate.format('M');
+    var day = currentDate.format('D');
+    var year = currentDate.format('YYYY');
+    var arrMonthOfYears = [];
+    var arrDaysOfMonth = [];
+    for (var cM = 1; cM <= month; cM++) { // '2016-03-12 13:00:00'
+        arrMonthOfYears.push(moment(year + '-' + cM + '-01'));
+    }
+    for (var cD = 1; cD <= day; cD++) { // '2016-03-12 13:00:00'
+        arrDaysOfMonth.push(moment(year + '-' + month + '-'+cD));
+    }
+    var arrResults = [];
+    async.forEach(arrMonthOfYears,function getStats(obj,callback){
+        console.log('obj',obj);
+      
+        ActivityStatement.countDocuments({ activity_deleted: 0, activity_disabled: 0 })
+        .then(colCounts => {console.log('colCounts',colCounts);
+            arrResults.push(colCounts);
+        });
+    },function completed(err){
+
+    });
+    console.log('arrResults', arrResults);
+    // console.log('arrMonthOfYears', arrMonthOfYears);
+    // console.log('arrDaysOfMonth', arrDaysOfMonth);
+    // console.log(currentDate);
+    console.log('month', month);
+    console.log('day', day);
+    console.log('year', year);
+
+    return res.status(403).send({ success: false, msg: 'Unauthorised' });
+}
 module.exports = {
     getCashbackCliams,
     getRevenueCashbackCliams,
@@ -752,6 +791,7 @@ module.exports = {
     requestTurnoverPayout,
     updatePaymentDetails,
     updateUserAccount,
-    getUserActivities
+    getUserActivities,
+    getAffilatesStats
 }
 

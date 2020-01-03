@@ -1,5 +1,5 @@
 const Menu = require('../../models/Jos_menu');
-const { getToken, genRandomPassword } = require('../../utils/api.helpers');
+const { getToken, genRandomPassword, convertToSlug} = require('../../utils/api.helpers');
 var md5 = require('md5');
 const path = require('path');
 function createMenu(req, res) {
@@ -28,7 +28,7 @@ function createMenu(req, res) {
             }
             newMenu.name = name;
             newMenu.type = type;
-            newMenu.link = link;
+            newMenu.link = convertToSlug(link);
             newMenu.parent = parent;
             newMenu.access = parseInt(access);
             updateData.showInMenu = parseInt(showInMenu);
@@ -91,7 +91,7 @@ function updateMenu(req, res, next) {
                     updateData.name = name;
                     if(dataRow.defaultMenuItem === 0){
                         updateData.type = type;
-                        updateData.link = link;
+                        updateData.link = convertToSlug(link);
                         updateData.parent = parent;
                     }
                   

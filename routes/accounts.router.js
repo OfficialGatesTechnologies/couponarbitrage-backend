@@ -15,7 +15,8 @@ const {
     requestTurnoverPayout,
     updatePaymentDetails,
     updateUserAccount,
-    getUserActivities
+    getUserActivities,
+    getAffilatesStats
 } = require('../controllers/accounts.controller');
 
 
@@ -59,4 +60,5 @@ router.post('/update-account', passport.authenticate('jwt', {
 router.get('/user-activities', passport.authenticate('jwt', {
     session: false
 }), getUserActivities);
+router.get('/affilates-stats', getAffilatesStats);
 module.exports = router;

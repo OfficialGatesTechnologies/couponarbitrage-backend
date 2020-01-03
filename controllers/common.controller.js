@@ -5,6 +5,8 @@ const Static = require('../models/Static');
 const TurnoverRegistration = require('../models/Turnover_registration');
 const EmailTemplates = require('../models/Email_template');
 const Faqs = require('../models/Faq');
+const Article = require('../models/Articles');
+const Comment = require('../models/Articles_comments');
 const {
     getToken,
     genRandomPassword,
@@ -38,7 +40,7 @@ function getMenus(req, res) {
 
 function getMenuRowByUrl(req, res) {
 
-    Menu.findOne({ link: req.query.link }).then(dataRow => {
+    Menu.findOne({ link: req.query.link }).populate('submenus').populate('articleList').then(dataRow => {
         if (dataRow.length === 0) return res.status(200).send({ success: false });
         return res.status(200).send({ success: true, 'results': dataRow });
     }).catch(() => {
@@ -53,6 +55,50 @@ function getCatRowByUrl(req, res) {
         return res.status(200).send({ success: true, 'results': dataRow });
     }).catch(() => {
         return res.status(400).send({ success: false, msg: 'Server error' });
+    });
+
+}
+function getArticleRowByURL(req, res) {
+    Article.findOne({ title_alias: req.query.link }).populate('parentRow').then(dataRow => {
+        if (dataRow.length === 0) return res.status(200).send({ success: false });
+        return res.status(200).send({ success: true, 'results': dataRow });
+    }).catch(() => {
+        return res.status(400).send({ success: false, msg: 'Server error' });
+    });
+
+}
+function createComment(req, res) {
+
+    const { body } = req;
+    const { articleId, commentName, commentEmail,
+        commentDesc, googleRecaptcha
+    } = body;
+    if (!articleId) return res.status(400).send({ success: false, message: 'Please enter the title.' });
+    else if (!commentName) return res.status(400).send({ success: false, message: 'Please enter the link.' });
+    else if (!commentEmail) return res.status(400).send({ success: false, message: 'Please select commentEmail .' });
+    var recaptcha_url = "https://www.google.com/recaptcha/api/siteverify?";
+    recaptcha_url += "secret=" + RECAPTCHA_SECRET + "&";
+    recaptcha_url += "response=" + googleRecaptcha + "&";
+    recaptcha_url += "remoteip=" + req.connection.remoteAddress;
+    request(recaptcha_url, function (error, resp, resBody) {
+        if (error) return res.status(401).send({ success: false, msg: ' Captcha validation failed' });
+        resBody = JSON.parse(resBody);
+        if (resBody.success !== undefined && !resBody.success) {
+            return res.status(401).send({ success: false, msg: ' Captcha validation failed' });
+        }
+        const newComment = new Comment();
+        newComment.articleId = articleId;
+        newComment.commentName = (commentName);
+        newComment.commentEmail = commentEmail;
+        newComment.commentDesc = commentDesc;
+
+        newComment.save((err) => {
+            if (err) {
+                console.log('err 1 ', err);
+                return res.status(400).send({ success: true, msg: 'Server error!' });
+            }
+            return res.status(201).send({ success: true, msg: 'Your comment is awaiting moderation!' });
+        });
     });
 
 }
@@ -89,7 +135,7 @@ function turnoverReg(req, res, next) {
     const { body } = req;
     const { name, email, customer_type, account_id, network_type, currency, googleRecaptcha } = body.userData;
     if (!email) return res.status(400).send({ success: false, message: 'Please enter your email.' });
-     
+
     var recaptcha_url = "https://www.google.com/recaptcha/api/siteverify?";
     recaptcha_url += "secret=" + RECAPTCHA_SECRET + "&";
     recaptcha_url += "response=" + googleRecaptcha + "&";
@@ -166,6 +212,8 @@ module.exports = {
     getBanners,
     getStaticText,
     turnoverReg,
-    getFaqs
+    getFaqs,
+    getArticleRowByURL,
+    createComment
 }
 

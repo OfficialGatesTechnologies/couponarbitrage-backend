@@ -10,17 +10,12 @@ function createCredits(req, res) {
         else if (!body.creditData.revenueCreditType) return res.status(400).send({ success: false, message: 'Please select type.' });
         else if (!body.creditData.revenueCreditAmount) return res.status(400).send({ success: false, message: 'Please enter the network commission.' });
      
-
-
         const newCredits = new CashbackCredits();
-
         newCredits.revenueCreditUserId = body.creditData.revenueCreditUserId;
         newCredits.revenueCreditType = body.creditData.revenueCreditType;
         newCredits.revenueCreditAmount = body.creditData.revenueCreditAmount;
-
         newCredits.save((err) => {
             if (err) {
-
                 return res.status(400).send({ success: true, msg: err });
             }
             return res.status(201).send({ success: true, msg: 'Credit added successfully!' });

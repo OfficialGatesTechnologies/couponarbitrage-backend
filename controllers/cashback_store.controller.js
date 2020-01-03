@@ -15,7 +15,9 @@ function getCashbackStores(req, res) {
     var todayDate = moment().utcOffset(0);
     todayDate.set({ hour: 0, minute: 0, second: 0, millisecond: 0 })
     todayDate.toISOString()
-    todayDate.format()
+    todayDate.format();
+
+    
     let pageLimit = parseInt(req.query.pageLimit);
     let skippage = pageLimit * (req.query.page - 1);
     let query = {

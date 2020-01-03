@@ -60,6 +60,11 @@ const Articles = new Schema({
     default: 0
   }
 
+}, { toJSON: { virtuals: true } });
+Articles.virtual('parentRow', {
+  ref: 'jos_menu',
+  localField: 'category',
+  foreignField: '_id',
+  justOne: true,
 });
-
 module.exports = mongoose.model('articles', Articles, 'articles');
